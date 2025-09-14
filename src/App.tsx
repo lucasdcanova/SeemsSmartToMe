@@ -85,34 +85,27 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen text-white p-8 maximalist-bg">
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute top-40 right-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto">
+    <div className="min-h-screen" style={{background: 'linear-gradient(to bottom right, #111827, #1f2937, #111827)'}}>
+      <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
-        <header className="mb-12 text-center slide-up">
-          <h1 className="text-6xl font-bold mb-4 text-gradient float-animation rotate-in-3d">
+        <header className="mb-8 text-center">
+          <h1 className="text-4xl font-bold mb-2 text-gradient">
             Insider Agent
           </h1>
-          <p className="text-xl text-gray-300">
+          <p className="text-gray-400">
             Inteligência em tempo real para suas conversas
           </p>
         </header>
 
         {/* Status Bar */}
-        <div className="mb-8 flex items-center justify-center gap-6 flex-wrap">
-          <div className={`px-4 py-2 rounded-full glass-morphism flex items-center gap-2 ${offline ? 'border-red-500' : 'border-green-500'}`}>
-            <span className={`w-3 h-3 rounded-full ${offline ? 'bg-red-500' : 'bg-green-500 pulse-dot'}`}></span>
-            <span className="text-sm">{offline ? 'Offline' : 'Online'}</span>
+        <div className="mb-6 flex items-center justify-center gap-4 flex-wrap">
+          <div className={`status-indicator ${offline ? 'border-red-500/50' : 'border-green-500/50'}`}>
+            <span className={`w-2 h-2 rounded-full ${offline ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></span>
+            <span className="text-xs">{offline ? 'Offline' : 'Online'}</span>
           </div>
 
           {listening && (
-            <div className="px-4 py-2 rounded-full glass-morphism flex items-center gap-3">
+            <div className="status-indicator">
               <div className="sound-wave">
                 <span></span>
                 <span></span>
@@ -120,81 +113,75 @@ function App() {
                 <span></span>
                 <span></span>
               </div>
-              <span className="text-sm font-medium">Ouvindo...</span>
+              <span className="text-xs">Ouvindo...</span>
             </div>
           )}
 
           {processingStatus && (
-            <div className="px-4 py-2 rounded-full glass-morphism shimmer">
-              <span className="text-sm font-medium">{processingStatus}</span>
+            <div className="status-indicator animate-pulse-slow">
+              <span className="text-xs">{processingStatus}</span>
             </div>
           )}
         </div>
 
         {/* Control Center */}
-        <div className="mb-8 glass-morphism rounded-3xl p-8 glow-effect">
+        <div className="mb-6 card">
           <div className="flex flex-col items-center gap-6">
             {/* Main Control Button */}
             <div className="relative">
               {!listening ? (
                 <button
                   onClick={start}
-                  className="relative w-32 h-32 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 hover:from-green-500 hover:to-emerald-700 shadow-2xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group tilt-hover"
+                  className="w-24 h-24 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-xl transform hover:scale-110 transition-all duration-200 flex items-center justify-center"
                 >
-                  <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
-                  <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-sm font-medium whitespace-nowrap">
-                    Iniciar Escuta
-                  </span>
                 </button>
               ) : (
                 <button
                   onClick={stop}
-                  className="relative w-32 h-32 rounded-full bg-gradient-to-r from-red-400 to-pink-600 hover:from-red-500 hover:to-pink-700 shadow-2xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group pulse-ring tilt-hover"
+                  className="w-24 h-24 rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 shadow-xl transform hover:scale-110 transition-all duration-200 flex items-center justify-center animate-pulse"
                 >
-                  <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
                   </svg>
-                  <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-sm font-medium whitespace-nowrap">
-                    Parar Escuta
-                  </span>
                 </button>
               )}
+              <p className="text-center mt-3 text-sm text-gray-400">
+                {listening ? 'Parar' : 'Iniciar'} Escuta
+              </p>
             </div>
 
             {/* Current Transcript Display */}
             {currentTranscript && (
-              <div className="w-full max-w-2xl p-4 rounded-2xl bg-black/30 border border-white/10">
+              <div className="w-full max-w-2xl p-4 rounded-lg bg-black/20 border border-white/5">
                 <p className="text-sm text-gray-300 italic">"{currentTranscript}"</p>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 font-medium transform hover:scale-105 transition-all duration-300 shadow-lg tilt-hover"
+                className="btn-secondary flex items-center gap-2"
               >
-                <span className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                  </svg>
-                  Configurações
-                </span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Configurações
               </button>
 
               <button
                 onClick={exportJson}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 font-medium transform hover:scale-105 transition-all duration-300 shadow-lg tilt-hover"
+                className="btn-primary flex items-center gap-2"
               >
-                <span className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  Exportar
-                </span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Exportar
               </button>
             </div>
           </div>
@@ -202,14 +189,14 @@ function App() {
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className="mb-8 glass-morphism rounded-3xl p-8 slide-up">
+          <div className="mb-6 card">
             <Settings settings={settings} setSettings={setSettings} />
           </div>
         )}
 
         {/* Feed Display */}
-        <div className="glass-morphism rounded-3xl p-8">
-          <h2 className="text-2xl font-bold mb-6 text-gradient">Feed de Inteligência</h2>
+        <div className="card">
+          <h2 className="text-xl font-bold mb-4 text-gradient">Feed de Inteligência</h2>
           <Feed feed={feed} />
         </div>
       </div>
@@ -219,18 +206,18 @@ function App() {
 
 function Settings({ settings, setSettings }: { settings: Settings; setSettings: (s: Partial<Settings>) => void }) {
   return (
-    <div className="space-y-6">
-      <h3 className="text-xl font-semibold mb-4 text-gradient">Configurações</h3>
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold mb-4">Configurações</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-xs font-medium text-gray-400 mb-1">
             Cadência de Análise
           </label>
           <select
             value={settings.cadence}
             onChange={(e) => setSettings({ cadence: Number(e.target.value) })}
-            className="w-full px-4 py-2 rounded-lg bg-black/30 border border-white/20 text-white focus:border-purple-500 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
           >
             <option value={10}>10 segundos</option>
             <option value={30}>30 segundos</option>
@@ -239,52 +226,52 @@ function Settings({ settings, setSettings }: { settings: Settings; setSettings: 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-xs font-medium text-gray-400 mb-1">
             Idioma
           </label>
           <input
             value={settings.language}
             onChange={(e) => setSettings({ language: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg bg-black/30 border border-white/20 text-white focus:border-purple-500 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
             placeholder="pt-BR"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-xs font-medium text-gray-400 mb-1">
             OpenAI API Key
           </label>
           <input
             type="password"
             value={settings.openaiKey}
             onChange={(e) => setSettings({ openaiKey: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg bg-black/30 border border-white/20 text-white focus:border-purple-500 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
             placeholder="sk-..."
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-xs font-medium text-gray-400 mb-1">
             NewsAPI Key
           </label>
           <input
             type="password"
             value={settings.newsApiKey}
             onChange={(e) => setSettings({ newsApiKey: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg bg-black/30 border border-white/20 text-white focus:border-purple-500 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
             placeholder="API Key"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-xs font-medium text-gray-400 mb-1">
             Bing API Key
           </label>
           <input
             type="password"
             value={settings.bingKey}
             onChange={(e) => setSettings({ bingKey: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg bg-black/30 border border-white/20 text-white focus:border-purple-500 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
             placeholder="API Key"
           />
         </div>
@@ -296,102 +283,99 @@ function Settings({ settings, setSettings }: { settings: Settings; setSettings: 
 function Feed({ feed }: { feed: FeedItem[] }) {
   if (feed.length === 0) {
     return (
-      <div className="text-center py-12">
-        <svg className="w-24 h-24 mx-auto text-gray-600 mb-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z" clipRule="evenodd" />
+      <div className="text-center py-8">
+        <svg className="w-16 h-16 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <p className="text-gray-400">Nenhuma análise ainda. Clique em "Iniciar Escuta" para começar.</p>
+        <p className="text-gray-500 text-sm">Nenhuma análise ainda. Clique em "Iniciar Escuta" para começar.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {feed.slice().reverse().map((item, index) => (
+    <div className="space-y-4">
+      {feed.slice().reverse().map((item) => (
         <div
           key={item.id}
-          className="gradient-border card-hover tilt-hover"
-          style={{ animationDelay: `${index * 0.1}s` }}
+          className="p-4 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 transition-colors"
         >
-          <div className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-xs text-gray-400 mb-2">
-                  {new Date(item.timestamp).toLocaleString('pt-BR')}
-                </p>
-                <p className="text-gray-200 mb-4">{item.summary}</p>
-              </div>
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                {new Date(item.timestamp).toLocaleString('pt-BR')}
+              </p>
+              <p className="text-sm text-gray-200">{item.summary}</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Topics */}
-              <div>
-                <h4 className="text-sm font-semibold text-purple-400 mb-3">Tópicos</h4>
-                <div className="flex flex-wrap gap-2">
-                  {item.topics.map((topic, i) => (
-                    <span
-                      key={i}
-                      className="px-3 py-1 text-xs rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* News */}
-              <div>
-                <h4 className="text-sm font-semibold text-blue-400 mb-3">Notícias Relacionadas</h4>
-                <div className="space-y-2">
-                  {item.news.length > 0 ? (
-                    item.news.slice(0, 3).map((n, i) => (
-                      <a
-                        key={i}
-                        href={n.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block text-xs text-blue-300 hover:text-blue-400 truncate"
-                      >
-                        → {n.title}
-                      </a>
-                    ))
-                  ) : (
-                    <p className="text-xs text-gray-500">Buscando notícias...</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Insights */}
-              <div>
-                <h4 className="text-sm font-semibold text-green-400 mb-3">Insights</h4>
-                <div className="space-y-2">
-                  {item.insights.length > 0 ? (
-                    item.insights.map((insight, i) => (
-                      <p key={i} className="text-xs text-gray-300">
-                        • {insight}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-xs text-gray-500">Processando insights...</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Questions */}
-            {item.questions.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <h4 className="text-sm font-semibold text-yellow-400 mb-2">Questões Levantadas</h4>
-                <div className="flex flex-wrap gap-2">
-                  {item.questions.map((q, i) => (
-                    <span key={i} className="text-xs text-gray-400">
-                      {q}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            {/* Topics */}
+            <div>
+              <h4 className="font-semibold text-purple-400 mb-2">Tópicos</h4>
+              <div className="flex flex-wrap gap-1">
+                {item.topics.map((topic, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20"
+                  >
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* News */}
+            <div>
+              <h4 className="font-semibold text-blue-400 mb-2">Notícias</h4>
+              <div className="space-y-1">
+                {item.news.length > 0 ? (
+                  item.news.slice(0, 3).map((n, i) => (
+                    <a
+                      key={i}
+                      href={n.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-blue-300 hover:text-blue-400 truncate"
+                    >
+                      → {n.title}
+                    </a>
+                  ))
+                ) : (
+                  <p className="text-gray-500">Buscando...</p>
+                )}
+              </div>
+            </div>
+
+            {/* Insights */}
+            <div>
+              <h4 className="font-semibold text-green-400 mb-2">Insights</h4>
+              <div className="space-y-1">
+                {item.insights.length > 0 ? (
+                  item.insights.map((insight, i) => (
+                    <p key={i} className="text-gray-300">
+                      • {insight}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-gray-500">Processando...</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Questions */}
+          {item.questions.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-white/5">
+              <h4 className="text-xs font-semibold text-yellow-400 mb-1">Questões</h4>
+              <div className="flex flex-wrap gap-1">
+                {item.questions.map((q, i) => (
+                  <span key={i} className="text-xs text-gray-400">
+                    {q}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

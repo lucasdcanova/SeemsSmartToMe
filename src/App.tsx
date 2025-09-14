@@ -85,7 +85,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen text-white p-8">
+    <div className="min-h-screen text-white p-8 maximalist-bg">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
@@ -96,7 +96,7 @@ function App() {
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
         <header className="mb-12 text-center slide-up">
-          <h1 className="text-6xl font-bold mb-4 text-gradient float-animation">
+          <h1 className="text-6xl font-bold mb-4 text-gradient float-animation rotate-in-3d">
             Insider Agent
           </h1>
           <p className="text-xl text-gray-300">
@@ -139,7 +139,7 @@ function App() {
               {!listening ? (
                 <button
                   onClick={start}
-                  className="relative w-32 h-32 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 hover:from-green-500 hover:to-emerald-700 shadow-2xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+                  className="relative w-32 h-32 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 hover:from-green-500 hover:to-emerald-700 shadow-2xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group tilt-hover"
                 >
                   <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -152,7 +152,7 @@ function App() {
               ) : (
                 <button
                   onClick={stop}
-                  className="relative w-32 h-32 rounded-full bg-gradient-to-r from-red-400 to-pink-600 hover:from-red-500 hover:to-pink-700 shadow-2xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group pulse-ring"
+                  className="relative w-32 h-32 rounded-full bg-gradient-to-r from-red-400 to-pink-600 hover:from-red-500 hover:to-pink-700 shadow-2xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group pulse-ring tilt-hover"
                 >
                   <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
@@ -175,7 +175,7 @@ function App() {
             <div className="flex gap-4">
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 font-medium transform hover:scale-105 transition-all duration-300 shadow-lg tilt-hover"
               >
                 <span className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -187,7 +187,7 @@ function App() {
 
               <button
                 onClick={exportJson}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 font-medium transform hover:scale-105 transition-all duration-300 shadow-lg"
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 font-medium transform hover:scale-105 transition-all duration-300 shadow-lg tilt-hover"
               >
                 <span className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -310,7 +310,7 @@ function Feed({ feed }: { feed: FeedItem[] }) {
       {feed.slice().reverse().map((item, index) => (
         <div
           key={item.id}
-          className="gradient-border card-hover"
+          className="gradient-border card-hover tilt-hover"
           style={{ animationDelay: `${index * 0.1}s` }}
         >
           <div className="p-6">

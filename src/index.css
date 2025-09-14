@@ -55,6 +55,27 @@
     content: '';
     @apply relative inline-flex rounded-full h-full w-full bg-green-500;
   }
+
+  .tilt-hover {
+    @apply transition-transform duration-500;
+    transform-style: preserve-3d;
+  }
+
+  .tilt-hover:hover {
+    transform: perspective(1000px) rotateX(8deg) rotateY(-8deg) scale(1.05);
+  }
+
+  .rotate-in-3d {
+    animation: rotateIn3D 0.8s ease-out forwards;
+    transform-origin: top;
+  }
+
+  .maximalist-bg {
+    background: radial-gradient(circle at top left, #8b5cf6, transparent 70%),
+      radial-gradient(circle at bottom right, #ec4899, transparent 70%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%) 0 0/50px 50px,
+      linear-gradient(135deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%) 0 0/50px 50px;
+  }
 }
 
 @keyframes pulse-ring {
@@ -98,6 +119,17 @@
   }
   to {
     transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes rotateIn3D {
+  from {
+    transform: perspective(800px) rotateX(-90deg);
+    opacity: 0;
+  }
+  to {
+    transform: perspective(800px) rotateX(0deg);
     opacity: 1;
   }
 }

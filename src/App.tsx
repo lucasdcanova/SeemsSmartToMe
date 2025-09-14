@@ -128,28 +128,73 @@ function App() {
         <div className="mb-6 card">
           <div className="flex flex-col items-center gap-6">
             {/* Main Control Button */}
-            <div className="relative">
+            <div style={{position: 'relative'}}>
               {!listening ? (
                 <button
                   onClick={start}
-                  className="w-24 h-24 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-xl transform hover:scale-110 transition-all duration-200 flex items-center justify-center"
+                  style={{
+                    width: '96px',
+                    height: '96px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(to right, #059669, #10b981)',
+                    border: 'none',
+                    color: 'white',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                    transform: 'scale(1)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(to right, #047857, #059669)'
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(to right, #059669, #10b981)'
+                    e.currentTarget.style.transform = 'scale(1)'
+                  }}
                 >
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg style={{width: '40px', height: '40px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
                 </button>
               ) : (
                 <button
                   onClick={stop}
-                  className="w-24 h-24 rounded-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 shadow-xl transform hover:scale-110 transition-all duration-200 flex items-center justify-center animate-pulse"
+                  className="animate-pulse"
+                  style={{
+                    width: '96px',
+                    height: '96px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(to right, #dc2626, #e11d48)',
+                    border: 'none',
+                    color: 'white',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                    transform: 'scale(1)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(to right, #b91c1c, #be185d)'
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(to right, #dc2626, #e11d48)'
+                    e.currentTarget.style.transform = 'scale(1)'
+                  }}
                 >
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg style={{width: '40px', height: '40px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
                   </svg>
                 </button>
               )}
-              <p className="text-center mt-3 text-sm text-gray-400">
+              <p style={{textAlign: 'center', marginTop: '12px', fontSize: '14px', color: '#9ca3af'}}>
                 {listening ? 'Parar' : 'Iniciar'} Escuta
               </p>
             </div>

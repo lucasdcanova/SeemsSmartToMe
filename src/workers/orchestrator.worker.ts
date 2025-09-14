@@ -93,12 +93,30 @@ async function processBuffer() {
       console.log('[Orchestrator] API Response:', data)
 
       try {
-        const content = data.choices[0].message.content
-        console.log('[Orchestrator] Parsing JSON:', content)
-        result = JSON.parse(content)
+        let content = data.choices[0].message.content
+        console.log('[Orchestrator] Raw content:', content)
+
+        // Remove markdown code blocks if present
+        content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+
+        console.log('[Orchestrator] Cleaned content:', content)
+        const parsed = JSON.parse(content)
+
+        // Ensure all fields are properly set
+        result.summary = parsed.summary || text.substring(0, 100)
+        result.topics = Array.isArray(parsed.topics) ? parsed.topics : []
+        result.intents = Array.isArray(parsed.intents) ? parsed.intents : []
+        result.questions = Array.isArray(parsed.questions) ? parsed.questions : []
+
+        console.log('[Orchestrator] Parsed result:', result)
       } catch (parseError) {
         console.error('[Orchestrator] JSON Parse Error:', parseError)
-        result.summary = data.choices?.[0]?.message?.content || 'Erro ao processar resposta'
+        // Fallback: extract what we can from the response
+        const content = data.choices?.[0]?.message?.content || ''
+        result.summary = content.substring(0, 200) || 'Análise do conteúdo'
+        result.topics = text.split(/\W+/).filter(word => word.length > 4).slice(0, 5)
+        result.intents = ['Discussão geral']
+        result.questions = ['O que mais você gostaria de saber?']
       }
     } catch (fetchError: any) {
       console.error('[Orchestrator] Fetch Error:', fetchError)

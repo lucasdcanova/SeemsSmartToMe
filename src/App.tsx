@@ -403,79 +403,107 @@ function Feed({ feed }: { feed: FeedItem[] }) {
           key={item.id}
           className="p-4 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 transition-colors"
         >
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">
-                {new Date(item.timestamp).toLocaleString('pt-BR')}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-400">
+                📅 {new Date(item.timestamp).toLocaleString('pt-BR')}
               </p>
-              <p className="text-sm text-gray-200">{item.summary}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-gradient-to-r from-purple-900/20 to-indigo-900/20 border-l-4 border-purple-500">
+              <p className="text-sm text-gray-100 leading-relaxed">
+                {typeof item.summary === 'string' && !item.summary.includes('{')
+                  ? item.summary
+                  : 'Análise em processamento...'}
+              </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             {/* Topics */}
             <div>
-              <h4 className="font-semibold text-purple-400 mb-2">Tópicos</h4>
+              <h4 className="font-semibold text-purple-400 mb-2 flex items-center gap-1">
+                <span>🏷️</span> Tópicos
+              </h4>
               <div className="flex flex-wrap gap-1">
-                {item.topics.map((topic, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20"
-                  >
-                    {topic}
-                  </span>
-                ))}
+                {item.topics && item.topics.length > 0 ? (
+                  item.topics.map((topic, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 text-xs"
+                    >
+                      {typeof topic === 'string' ? topic : 'Processando...'}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 italic">Identificando tópicos...</span>
+                )}
               </div>
             </div>
 
             {/* News */}
             <div>
-              <h4 className="font-semibold text-blue-400 mb-2">Informações</h4>
-              <div className="space-y-1">
-                {item.news.length > 0 ? (
+              <h4 className="font-semibold text-blue-400 mb-2 flex items-center gap-1">
+                <span>📰</span> Informações
+              </h4>
+              <div className="space-y-2">
+                {item.news && item.news.length > 0 ? (
                   item.news.slice(0, 3).map((n, i) => (
                     <a
                       key={i}
-                      href={n.url}
+                      href={n.url !== '#' ? n.url : undefined}
                       target="_blank"
                       rel="noreferrer"
-                      className="block text-blue-300 hover:text-blue-400 truncate"
+                      className="block p-2 rounded bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
                     >
-                      → {n.title}
+                      <p className="text-blue-300 text-xs leading-relaxed">
+                        {n.title}
+                      </p>
                     </a>
                   ))
                 ) : (
-                  <p className="text-gray-500">Buscando...</p>
+                  <div className="p-2 rounded bg-gray-800/50">
+                    <p className="text-gray-400 text-xs italic">Gerando informações relevantes...</p>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Insights */}
             <div>
-              <h4 className="font-semibold text-green-400 mb-2">Insights</h4>
-              <div className="space-y-1">
-                {item.insights.length > 0 ? (
+              <h4 className="font-semibold text-green-400 mb-2 flex items-center gap-1">
+                <span>💡</span> Insights
+              </h4>
+              <div className="space-y-2">
+                {item.insights && item.insights.length > 0 ? (
                   item.insights.map((insight, i) => (
-                    <p key={i} className="text-gray-300">
-                      • {insight}
-                    </p>
+                    <div key={i} className="p-2 rounded bg-green-500/10 border-l-2 border-green-500">
+                      <p className="text-gray-200 text-xs leading-relaxed">
+                        {insight}
+                      </p>
+                    </div>
                   ))
                 ) : (
-                  <p className="text-gray-500">Processando...</p>
+                  <div className="p-2 rounded bg-gray-800/50">
+                    <p className="text-gray-400 text-xs italic">Analisando contexto...</p>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
           {/* Questions */}
-          {item.questions.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-white/5">
-              <h4 className="text-xs font-semibold text-yellow-400 mb-1">Questões</h4>
-              <div className="flex flex-wrap gap-1">
+          {item.questions && item.questions.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <h4 className="text-xs font-semibold text-yellow-400 mb-2 flex items-center gap-1">
+                <span>❓</span> Questões Levantadas
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {item.questions.map((q, i) => (
-                  <span key={i} className="text-xs text-gray-400">
-                    {q}
-                  </span>
+                  <div key={i} className="p-2 rounded bg-yellow-500/10 border-l-2 border-yellow-500">
+                    <p className="text-xs text-gray-300">
+                      {typeof q === 'string' ? q : 'Processando...'}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>

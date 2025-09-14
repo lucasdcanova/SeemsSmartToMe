@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore, type Settings, type FeedItem } from './store'
 import './index.css'
+import './speech-recognition.d.ts'
 
 const orchestrator = new Worker(new URL('./workers/orchestrator.worker.ts', import.meta.url), { type: 'module' })
 const enricher = new Worker(new URL('./workers/enricher.worker.ts', import.meta.url), { type: 'module' })
@@ -48,14 +49,13 @@ function App() {
   }, [settings.newsApiKey, settings.bingKey, offline])
 
   const start = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) return
-    const recognition: SpeechRecognition = new SpeechRecognition()
+    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognitionClass) return
+    const recognition = new SpeechRecognitionClass()
     recognition.lang = settings.language
     recognition.continuous = true
     recognition.interimResults = true
-    recognition.onresult = (e: SpeechRecognitionEvent) => {
+    recognition.onresult = (e) => {
       const transcript = Array.from(e.results).map((r) => r[0].transcript).join(' ')
       setCurrentTranscript(transcript)
       if (e.results[e.results.length - 1].isFinal) {

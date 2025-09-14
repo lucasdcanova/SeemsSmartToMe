@@ -24,6 +24,7 @@ function App() {
 
   useEffect(() => {
     loadCachedFeed()
+    addDebugInfo(`🔧 Iniciando sistema - OpenAI: ${settings.openaiKey ? '✅' : '❌'}, NewsAPI: ${settings.newsApiKey ? '✅' : '❌'}, Bing: ${settings.bingKey ? '✅' : '❌'}`)
     orchestrator.postMessage({ type: 'init', cadence: settings.cadence, language: settings.language, openaiKey: settings.openaiKey })
     const handleOnline = () => setOffline(false)
     const handleOffline = () => setOffline(true)

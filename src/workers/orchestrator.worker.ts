@@ -38,7 +38,13 @@ self.onmessage = async (e: MessageEvent<Message>) => {
 
 async function processBuffer() {
   const text = buffer.trim()
-  if (!text) return
+  console.log('[Orchestrator] Processing buffer:', text.substring(0, 100) + '...')
+
+  if (!text) {
+    console.log('[Orchestrator] Buffer is empty, skipping')
+    return
+  }
+
   buffer = ''
   let result = {
     summary: '',
@@ -46,32 +52,60 @@ async function processBuffer() {
     intents: [] as string[],
     questions: [] as string[],
   }
-  if (offline) {
+
+  if (offline || !openaiKey) {
+    console.log('[Orchestrator] Processing offline or without API key')
     result.summary = summarizeLocal(text)
-    result.topics = Array.from(new Set(text.split(/\W+/).slice(0, 5)))
+    result.topics = Array.from(new Set(text.split(/\W+/).filter(word => word.length > 3).slice(0, 5)))
+    result.intents = ['Conversação geral', 'Compartilhamento de informações']
+    result.questions = ['Qual o contexto?', 'Como isso se relaciona?']
   } else {
+    console.log('[Orchestrator] Processing with OpenAI API')
     const prompt = `Resuma o texto a seguir e extraia topicos, intencoes e perguntas implicitas. Responda em JSON com as chaves summary, topics, intents e questions. Texto: """${text}"""`
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openaiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-5',
-        messages: [
-          { role: 'system', content: `You are a helpful assistant summarizing in ${language}.` },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.7,
-      }),
-    })
-    const data = await res.json()
+
     try {
-      result = JSON.parse(data.choices[0].message.content)
-    } catch {
-      result.summary = data.choices?.[0]?.message?.content || ''
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: `You are a helpful assistant summarizing in ${language}.` },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.7,
+        }),
+      })
+
+      if (!res.ok) {
+        console.error('[Orchestrator] API Error:', res.status, res.statusText)
+        const errorText = await res.text()
+        console.error('[Orchestrator] API Error details:', errorText)
+        result.summary = `Erro na API: ${res.status} - ${errorText.substring(0, 100)}`
+        ;(self as unknown as Worker).postMessage(result)
+        return
+      }
+
+      const data = await res.json()
+      console.log('[Orchestrator] API Response:', data)
+
+      try {
+        const content = data.choices[0].message.content
+        console.log('[Orchestrator] Parsing JSON:', content)
+        result = JSON.parse(content)
+      } catch (parseError) {
+        console.error('[Orchestrator] JSON Parse Error:', parseError)
+        result.summary = data.choices?.[0]?.message?.content || 'Erro ao processar resposta'
+      }
+    } catch (fetchError: any) {
+      console.error('[Orchestrator] Fetch Error:', fetchError)
+      result.summary = `Erro de conexão: ${fetchError.message || 'Erro desconhecido'}`
     }
   }
+
+  console.log('[Orchestrator] Final result:', result)
   ;(self as unknown as Worker).postMessage(result)
 }

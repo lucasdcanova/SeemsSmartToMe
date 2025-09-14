@@ -13,6 +13,14 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [currentTranscript, setCurrentTranscript] = useState('')
   const [processingStatus, setProcessingStatus] = useState('')
+  const [audioLevel, setAudioLevel] = useState(0)
+  const [transcriptFinal, setTranscriptFinal] = useState('')
+  const [debugInfo, setDebugInfo] = useState<string[]>([])
+
+  const addDebugInfo = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString()
+    setDebugInfo(prev => [...prev.slice(-4), `[${timestamp}] ${message}`])
+  }
 
   useEffect(() => {
     loadCachedFeed()
@@ -33,44 +41,97 @@ function App() {
 
   useEffect(() => {
     orchestrator.onmessage = (e) => {
-      setProcessingStatus('Analisando contexto...')
+      addDebugInfo('Resposta recebida do orchestrator')
+      setProcessingStatus('🧠 Analisando contexto e extraindo insights...')
       const { summary, topics, intents, questions } = e.data
+      addDebugInfo(`Análise concluída: ${topics?.length || 0} tópicos encontrados`)
+
       const id = Date.now()
       addFeedItem({ id, summary, topics, intents, questions, news: [], insights: [], timestamp: Date.now() })
+
+      setProcessingStatus('🔍 Buscando notícias relacionadas...')
       enricher.postMessage({ type: 'enrich', id, topics, newsApiKey: settings.newsApiKey, bingKey: settings.bingKey, offline })
-      setTimeout(() => setProcessingStatus(''), 3000)
+      addDebugInfo('Solicitação de enriquecimento enviada')
     }
+
     enricher.onmessage = (e) => {
-      setProcessingStatus('Enriquecendo com insights...')
+      addDebugInfo('Enriquecimento recebido')
+      setProcessingStatus('✨ Finalizando insights...')
       const { id, news, insights } = e.data
       updateFeedItem(id, { news, insights })
+      addDebugInfo(`Concluído: ${news?.length || 0} notícias, ${insights?.length || 0} insights`)
       setTimeout(() => setProcessingStatus(''), 2000)
     }
   }, [settings.newsApiKey, settings.bingKey, offline])
 
   const start = () => {
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognitionClass) return
+    if (!SpeechRecognitionClass) {
+      addDebugInfo('❌ Speech Recognition não suportado neste navegador')
+      return
+    }
+
+    addDebugInfo('🎤 Iniciando reconhecimento de voz...')
     const recognition = new SpeechRecognitionClass()
     recognition.lang = settings.language
     recognition.continuous = true
     recognition.interimResults = true
+
+    recognition.onstart = () => {
+      addDebugInfo('✅ Reconhecimento de voz iniciado')
+      setProcessingStatus('🎤 Ouvindo... Pode falar!')
+    }
+
     recognition.onresult = (e) => {
       const transcript = Array.from(e.results).map((r) => r[0].transcript).join(' ')
       setCurrentTranscript(transcript)
+
+      // Simular nível de áudio baseado no comprimento da transcrição
+      setAudioLevel(Math.min(transcript.length / 10, 10))
+
       if (e.results[e.results.length - 1].isFinal) {
+        setTranscriptFinal(transcript)
+        addDebugInfo(`📝 Transcrição finalizada: "${transcript.substring(0, 50)}..."`)
+        setProcessingStatus('🔄 Enviando para análise...')
+
         orchestrator.postMessage({ type: 'transcript', text: transcript, offline })
+        addDebugInfo('📤 Transcrição enviada para o orchestrator')
+
+        // Limpar transcrição temporária após envio
+        setTimeout(() => {
+          setCurrentTranscript('')
+          setAudioLevel(0)
+        }, 1000)
+      } else {
+        addDebugInfo('🎧 Capturando áudio...')
       }
     }
+
+    recognition.onerror = (e: any) => {
+      addDebugInfo(`❌ Erro no reconhecimento: ${e.error || 'Erro desconhecido'}`)
+      setProcessingStatus('❌ Erro no reconhecimento de voz')
+    }
+
+    recognition.onend = () => {
+      addDebugInfo('🔴 Reconhecimento de voz finalizado')
+      if (listening) {
+        // Reiniciar automaticamente se ainda estiver no modo listening
+        setTimeout(() => recognition.start(), 100)
+      }
+    }
+
     recognitionRef.current = recognition
     recognition.start()
     setListening(true)
   }
 
   const stop = () => {
+    addDebugInfo('🛑 Parando reconhecimento de voz...')
     recognitionRef.current?.stop()
     setListening(false)
     setCurrentTranscript('')
+    setAudioLevel(0)
+    setProcessingStatus('')
   }
 
   const exportJson = () => {
@@ -107,13 +168,15 @@ function App() {
           {listening && (
             <div className="status-indicator">
               <div className="sound-wave">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
+                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.1})`}}></span>
+                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.15})`}}></span>
+                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.2})`}}></span>
+                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.15})`}}></span>
+                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.1})`}}></span>
               </div>
-              <span className="text-xs">Ouvindo...</span>
+              <span className="text-xs">
+                {currentTranscript ? '🎙️ Capturando...' : '👂 Ouvindo...'}
+              </span>
             </div>
           )}
 
@@ -236,6 +299,26 @@ function App() {
         {showSettings && (
           <div className="mb-6 card">
             <Settings settings={settings} setSettings={setSettings} />
+          </div>
+        )}
+
+        {/* Debug Panel */}
+        {debugInfo.length > 0 && (
+          <div className="mb-6 card">
+            <h3 className="text-lg font-semibold mb-3">🔍 Status do Sistema</h3>
+            <div className="space-y-1">
+              {debugInfo.map((info, i) => (
+                <p key={i} className="text-xs font-mono" style={{color: '#94a3b8'}}>
+                  {info}
+                </p>
+              ))}
+            </div>
+            {transcriptFinal && (
+              <div className="mt-4 p-3 rounded-lg" style={{backgroundColor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)'}}>
+                <p className="text-sm font-semibold text-green-400 mb-1">📝 Última Transcrição Processada:</p>
+                <p className="text-sm" style={{color: '#d1d5db'}}>"{transcriptFinal}"</p>
+              </div>
+            )}
           </div>
         )}
 

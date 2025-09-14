@@ -17,8 +17,6 @@ export interface Settings {
   cadence: number
   language: string
   openaiKey: string
-  newsApiKey: string
-  bingKey: string
 }
 
 interface State {
@@ -44,8 +42,6 @@ export const useAppStore = create<State>()(
         cadence: 10,
         language: navigator.language || 'pt-BR',
         openaiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
-        newsApiKey: import.meta.env.VITE_NEWSAPI_KEY || '',
-        bingKey: import.meta.env.VITE_BING_API_KEY || '',
       },
       setOffline: (o) => set({ offline: o }),
       setSettings: (s) => set({ settings: { ...get().settings, ...s } }),

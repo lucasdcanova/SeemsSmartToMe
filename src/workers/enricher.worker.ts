@@ -2,22 +2,21 @@ interface EnrichMessage {
   type: 'enrich'
   id: number
   topics: string[]
-  newsApiKey: string
-  bingKey: string
+  openaiKey: string
   offline: boolean
 }
 
 self.onmessage = async (e: MessageEvent<EnrichMessage>) => {
-  const { topics, newsApiKey, bingKey, offline, id } = e.data
+  const { topics, openaiKey, offline, id } = e.data
   console.log('[Enricher] Processing topics:', topics, 'offline:', offline)
 
-  if (offline || (!newsApiKey && !bingKey)) {
-    console.log('[Enricher] Offline mode or no API keys, generating mock data')
-    const mockNews = topics.slice(0, 2).map(topic => ({
-      title: `Notícia sobre ${topic}`,
-      url: `https://example.com/news/${topic.toLowerCase().replace(/\s+/g, '-')}`
+  if (offline || !openaiKey) {
+    console.log('[Enricher] Offline mode or no API key, generating mock data')
+    const mockNews = topics.slice(0, 3).map(topic => ({
+      title: `Informação relevante sobre ${topic}`,
+      url: `https://example.com/${topic.toLowerCase().replace(/\s+/g, '-')}`
     }))
-    const mockInsights = topics.map(topic => `Insight gerado para: ${topic}`)
+    const mockInsights = topics.map(topic => `Análise: ${topic} é um tópico relevante no contexto atual`)
     ;(self as unknown as Worker).postMessage({ id, news: mockNews, insights: mockInsights })
     return
   }
@@ -31,51 +30,100 @@ self.onmessage = async (e: MessageEvent<EnrichMessage>) => {
   const news: { title: string; url: string }[] = []
   const insights: string[] = []
 
-  for (const topic of topics) {
-    console.log('[Enricher] Processing topic:', topic)
+  try {
+    console.log('[Enricher] Using OpenAI to generate insights and news')
 
-    // Try NewsAPI
-    if (newsApiKey) {
-      try {
-        console.log('[Enricher] Fetching from NewsAPI for:', topic)
-        const res = await fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(topic)}&pageSize=1&language=pt`, {
-          headers: { 'X-API-Key': newsApiKey },
-        })
-        const data = await res.json()
-        console.log('[Enricher] NewsAPI response for', topic, ':', data)
-        if (data.articles?.[0]) {
-          news.push({ title: data.articles[0].title, url: data.articles[0].url })
-          console.log('[Enricher] Added news from NewsAPI:', data.articles[0].title)
-        }
-      } catch (error) {
-        console.error('[Enricher] NewsAPI error for', topic, ':', error)
-      }
+    const prompt = `
+Você é um assistente especializado em análise de contexto e informações atualizadas.
+
+Tópicos identificados: ${topics.join(', ')}
+
+Por favor, forneça:
+1. 3 insights relevantes sobre estes tópicos
+2. 3 informações ou notícias recentes relacionadas (com títulos descritivos)
+
+Responda em JSON no formato:
+{
+  "insights": ["insight1", "insight2", "insight3"],
+  "news": [
+    {"title": "título da informação 1", "url": "https://example.com/1"},
+    {"title": "título da informação 2", "url": "https://example.com/2"},
+    {"title": "título da informação 3", "url": "https://example.com/3"}
+  ]
+}
+
+Seja conciso e relevante. Use português brasileiro.`
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Você é um assistente que fornece insights e informações atualizadas sobre tópicos. Sempre responda em JSON válido.'
+          },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    })
+
+    if (!res.ok) {
+      console.error('[Enricher] OpenAI API Error:', res.status, res.statusText)
+      const errorText = await res.text()
+      console.error('[Enricher] Error details:', errorText)
+
+      // Fallback to basic insights
+      insights.push(...topics.map(topic => `Análise: ${topic} requer atenção especial`))
+      news.push({
+        title: 'Erro ao buscar informações atualizadas',
+        url: 'https://status.openai.com'
+      })
     } else {
-      console.log('[Enricher] NewsAPI key not provided')
-    }
+      const data = await res.json()
+      console.log('[Enricher] OpenAI response:', data)
 
-    // Try Bing API
-    if (bingKey) {
       try {
-        console.log('[Enricher] Fetching from Bing for:', topic)
-        const res = await fetch(`https://api.bing.microsoft.com/v7.0/news/search?q=${encodeURIComponent(topic)}&count=1&mkt=pt-BR`, {
-          headers: { 'Ocp-Apim-Subscription-Key': bingKey },
-        })
-        const data = await res.json()
-        console.log('[Enricher] Bing response for', topic, ':', data)
-        if (data.value?.[0]) {
-          news.push({ title: data.value[0].name, url: data.value[0].url })
-          console.log('[Enricher] Added news from Bing:', data.value[0].name)
-        }
-      } catch (error) {
-        console.error('[Enricher] Bing error for', topic, ':', error)
-      }
-    } else {
-      console.log('[Enricher] Bing key not provided')
-    }
+        const content = JSON.parse(data.choices[0].message.content)
+        console.log('[Enricher] Parsed content:', content)
 
-    // Generate simple insights
-    insights.push(`Tópico identificado: ${topic}`)
+        if (content.insights) {
+          insights.push(...content.insights)
+        }
+
+        if (content.news) {
+          news.push(...content.news)
+        }
+      } catch (parseError) {
+        console.error('[Enricher] Parse error:', parseError)
+        // Fallback: use the raw content as an insight
+        const rawContent = data.choices?.[0]?.message?.content || ''
+        if (rawContent) {
+          insights.push(rawContent.substring(0, 200))
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Enricher] General error:', error)
+    insights.push('Erro ao processar informações. Verifique a configuração.')
+  }
+
+  // Ensure we always have some content
+  if (insights.length === 0) {
+    insights.push(...topics.map(topic => `Tópico identificado: ${topic}`))
+  }
+
+  if (news.length === 0) {
+    news.push({
+      title: 'Busque mais informações sobre: ' + topics.join(', '),
+      url: `https://www.google.com/search?q=${encodeURIComponent(topics.join(' '))}`
+    })
   }
 
   console.log('[Enricher] Final results - News:', news.length, 'Insights:', insights.length)

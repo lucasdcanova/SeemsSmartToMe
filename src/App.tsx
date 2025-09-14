@@ -24,7 +24,7 @@ function App() {
 
   useEffect(() => {
     loadCachedFeed()
-    addDebugInfo(`🔧 Iniciando sistema - OpenAI: ${settings.openaiKey ? '✅' : '❌'}, NewsAPI: ${settings.newsApiKey ? '✅' : '❌'}, Bing: ${settings.bingKey ? '✅' : '❌'}`)
+    addDebugInfo(`🔧 Iniciando sistema - OpenAI API: ${settings.openaiKey ? '✅ Configurada' : '❌ Não configurada'}`)
     orchestrator.postMessage({ type: 'init', cadence: settings.cadence, language: settings.language, openaiKey: settings.openaiKey })
     const handleOnline = () => setOffline(false)
     const handleOffline = () => setOffline(true)
@@ -50,8 +50,8 @@ function App() {
       const id = Date.now()
       addFeedItem({ id, summary, topics, intents, questions, news: [], insights: [], timestamp: Date.now() })
 
-      setProcessingStatus('🔍 Buscando notícias relacionadas...')
-      enricher.postMessage({ type: 'enrich', id, topics, newsApiKey: settings.newsApiKey, bingKey: settings.bingKey, offline })
+      setProcessingStatus('🔍 Gerando insights e informações...')
+      enricher.postMessage({ type: 'enrich', id, topics, openaiKey: settings.openaiKey, offline })
       addDebugInfo('Solicitação de enriquecimento enviada')
     }
 
@@ -60,10 +60,10 @@ function App() {
       setProcessingStatus('✨ Finalizando insights...')
       const { id, news, insights } = e.data
       updateFeedItem(id, { news, insights })
-      addDebugInfo(`Concluído: ${news?.length || 0} notícias, ${insights?.length || 0} insights`)
+      addDebugInfo(`Concluído: ${news?.length || 0} informações, ${insights?.length || 0} insights`)
       setTimeout(() => setProcessingStatus(''), 2000)
     }
-  }, [settings.newsApiKey, settings.bingKey, offline])
+  }, [settings.openaiKey, offline])
 
   const start = () => {
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -379,31 +379,6 @@ function Settings({ settings, setSettings }: { settings: Settings; setSettings: 
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            NewsAPI Key
-          </label>
-          <input
-            type="password"
-            value={settings.newsApiKey}
-            onChange={(e) => setSettings({ newsApiKey: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
-            placeholder="API Key"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            Bing API Key
-          </label>
-          <input
-            type="password"
-            value={settings.bingKey}
-            onChange={(e) => setSettings({ bingKey: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
-            placeholder="API Key"
-          />
-        </div>
       </div>
     </div>
   )
@@ -455,7 +430,7 @@ function Feed({ feed }: { feed: FeedItem[] }) {
 
             {/* News */}
             <div>
-              <h4 className="font-semibold text-blue-400 mb-2">Notícias</h4>
+              <h4 className="font-semibold text-blue-400 mb-2">Informações</h4>
               <div className="space-y-1">
                 {item.news.length > 0 ? (
                   item.news.slice(0, 3).map((n, i) => (

@@ -13,31 +13,10 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [currentTranscript, setCurrentTranscript] = useState('')
   const [processingStatus, setProcessingStatus] = useState('')
-  const [audioLevel, setAudioLevel] = useState(0)
-  const [transcriptFinal, setTranscriptFinal] = useState('')
-  const [debugInfo, setDebugInfo] = useState<string[]>([])
-
-  const totalInsights = useMemo(
-    () => feed.reduce((acc, item) => acc + (item.insights?.length ?? 0), 0),
-    [feed]
-  )
-  const totalTopics = useMemo(
-    () => feed.reduce((acc, item) => acc + (item.topics?.length ?? 0), 0),
-    [feed]
-  )
-  const openQuestions = useMemo(() => {
-    if (feed.length === 0) return 0
-    return feed[feed.length - 1].questions?.length ?? 0
-  }, [feed])
-
-  const addDebugInfo = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString()
-    setDebugInfo(prev => [...prev.slice(-4), `[${timestamp}] ${message}`])
-  }
+  const hasContent = useMemo(() => feed.length > 0, [feed])
 
   useEffect(() => {
     loadCachedFeed()
-    addDebugInfo(`🔧 Iniciando sistema - OpenAI API: ${settings.openaiKey ? '✅ Configurada' : '❌ Não configurada'}`)
     orchestrator.postMessage({ type: 'init', cadence: settings.cadence, language: settings.language, openaiKey: settings.openaiKey })
     const handleOnline = () => setOffline(false)
     const handleOffline = () => setOffline(true)
@@ -55,25 +34,20 @@ function App() {
 
   useEffect(() => {
     orchestrator.onmessage = (e) => {
-      addDebugInfo('Resposta recebida do orchestrator')
-      setProcessingStatus('🧠 Analisando contexto e extraindo insights...')
+      setProcessingStatus('Analisando contexto...')
       const { summary, topics, intents, questions } = e.data
-      addDebugInfo(`Análise concluída: ${topics?.length || 0} tópicos encontrados`)
 
       const id = Date.now()
       addFeedItem({ id, summary, topics, intents, questions, news: [], insights: [], timestamp: Date.now() })
 
-      setProcessingStatus('🔍 Gerando insights e informações...')
+      setProcessingStatus('Gerando insights...')
       enricher.postMessage({ type: 'enrich', id, topics, openaiKey: settings.openaiKey, offline })
-      addDebugInfo('Solicitação de enriquecimento enviada')
     }
 
     enricher.onmessage = (e) => {
-      addDebugInfo('Enriquecimento recebido')
-      setProcessingStatus('✨ Finalizando insights...')
+      setProcessingStatus('Finalizando...')
       const { id, news, insights } = e.data
       updateFeedItem(id, { news, insights })
-      addDebugInfo(`Concluído: ${news?.length || 0} informações, ${insights?.length || 0} insights`)
       setTimeout(() => setProcessingStatus(''), 2000)
     }
   }, [settings.openaiKey, offline])
@@ -81,51 +55,39 @@ function App() {
   const start = () => {
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognitionClass) {
-      addDebugInfo('❌ Speech Recognition não suportado neste navegador')
+      setProcessingStatus('Reconhecimento de voz não suportado neste navegador')
       return
     }
 
-    addDebugInfo('🎤 Iniciando reconhecimento de voz...')
     const recognition = new SpeechRecognitionClass()
     recognition.lang = settings.language
     recognition.continuous = true
     recognition.interimResults = true
 
     recognition.onstart = () => {
-      addDebugInfo('✅ Reconhecimento de voz iniciado')
-      setProcessingStatus('🎤 Ouvindo... Pode falar!')
+      setProcessingStatus('Ouvindo...')
     }
 
     recognition.onresult = (e) => {
       const transcript = Array.from(e.results).map((r) => r[0].transcript).join(' ')
       setCurrentTranscript(transcript)
 
-      setAudioLevel(Math.min(transcript.length / 10, 10))
-
       if (e.results[e.results.length - 1].isFinal) {
-        setTranscriptFinal(transcript)
-        addDebugInfo(`📝 Transcrição finalizada: "${transcript.substring(0, 50)}..."`)
-        setProcessingStatus('🔄 Enviando para análise...')
+        setProcessingStatus('Enviando para análise...')
 
         orchestrator.postMessage({ type: 'transcript', text: transcript, offline })
-        addDebugInfo('📤 Transcrição enviada para o orchestrator')
 
         setTimeout(() => {
           setCurrentTranscript('')
-          setAudioLevel(0)
         }, 1000)
-      } else {
-        addDebugInfo('🎧 Capturando áudio...')
       }
     }
 
     recognition.onerror = (e: any) => {
-      addDebugInfo(`❌ Erro no reconhecimento: ${e.error || 'Erro desconhecido'}`)
-      setProcessingStatus('❌ Erro no reconhecimento de voz')
+      setProcessingStatus(e.error ? `Erro: ${e.error}` : 'Erro no reconhecimento de voz')
     }
 
     recognition.onend = () => {
-      addDebugInfo('🔴 Reconhecimento de voz finalizado')
       if (listening) {
         setTimeout(() => recognition.start(), 100)
       }
@@ -137,11 +99,9 @@ function App() {
   }
 
   const stop = () => {
-    addDebugInfo('🛑 Parando reconhecimento de voz...')
     recognitionRef.current?.stop()
     setListening(false)
     setCurrentTranscript('')
-    setAudioLevel(0)
     setProcessingStatus('')
   }
 
@@ -156,81 +116,19 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
-  const statusNarrative = processingStatus || (listening ? '🎧 Imersão ativa' : '🛋️ Aguardando conversas')
-
   return (
     <div className="app-shell">
-      <div className="aurora-layer aurora-layer--1" />
-      <div className="aurora-layer aurora-layer--2" />
-      <div className="aurora-layer aurora-layer--3" />
-      <div className="grid-overlay" />
-      <div className="orb orb--one" />
-      <div className="orb orb--two" />
-
       <div className="app-container">
-        <header className="app-header neon-panel">
-          <div className="app-header__intro">
-            <span className="app-eyebrow">Radar conversacional em tempo real</span>
-            <h1 className="app-title">Insider Agent</h1>
-            <p className="app-lead">
-              Inteligência maximalista para transformar fala em estratégia instantânea. Mantenha sua equipe sincronizada com insights em
-              3D, sem perder o ritmo da conversa.
-            </p>
-          </div>
-          <div className="metric-wall">
-            <div className="metric-card">
-              <span className="metric-label">Conexão</span>
-              <p className={`metric-value ${offline ? 'metric-value--danger' : ''}`}>{offline ? 'Offline' : 'Online'}</p>
-              <span className="metric-legend">
-                {offline ? 'Reconecte para novas coletas' : 'Sincronizado com a nuvem'}
-              </span>
-            </div>
-            <div className="metric-card">
-              <span className="metric-label">Insights gerados</span>
-              <p className="metric-value">{totalInsights}</p>
-              <span className="metric-legend">{feed.length} análises completas</span>
-            </div>
-            <div className="metric-card">
-              <span className="metric-label">Tópicos mapeados</span>
-              <p className="metric-value">{totalTopics}</p>
-              <span className="metric-legend">{openQuestions} questões em aberto</span>
-            </div>
-          </div>
+        <header className="app-header surface app-header--minimal">
+          <span className="app-eyebrow">Remember everything. Organize nothing.</span>
+          <h1 className="app-title">Seems Smart to Me</h1>
+          <p className="app-lead">
+            Captura discreta de conversas e ideias, com insights organizados automaticamente. Nenhum feed social, nenhuma distração —
+            apenas o seu conteúdo.
+          </p>
         </header>
 
-        <section className="status-dock">
-          <div className={`status-pill ${offline ? 'status-pill--offline' : 'status-pill--online'}`}>
-            <span className="status-lamp" />
-            <span>{offline ? 'Modo offline' : 'Conexão estável'}</span>
-          </div>
-
-          <div className="status-pill status-pill--narrative">
-            <span className="status-glow" />
-            <span>{statusNarrative}</span>
-          </div>
-
-          {listening && (
-            <div className="status-pill status-pill--listening">
-              <div className="sound-wave">
-                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.1})` }} />
-                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.15})` }} />
-                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.2})` }} />
-                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.15})` }} />
-                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.1})` }} />
-              </div>
-              <span className="status-text">{currentTranscript ? 'Capturando espectro' : 'Escuta ativa'}</span>
-            </div>
-          )}
-
-          {processingStatus && (
-            <div className="status-pill status-pill--processing">
-              <span className="status-glow status-glow--pulse" />
-              <span>{processingStatus}</span>
-            </div>
-          )}
-        </section>
-
-        <section className="control-panel neon-panel">
+        <section className="control-panel surface">
           <div className={`control-orbit ${listening ? 'control-orbit--active' : ''}`}>
             <button
               onClick={listening ? stop : start}
@@ -250,6 +148,8 @@ function App() {
             <span className="control-hint">{listening ? 'Parar escuta' : 'Iniciar escuta'}</span>
           </div>
 
+          {processingStatus && <p className="status-inline">{processingStatus}</p>}
+
           {currentTranscript && (
             <div className="teleprompter">
               <span className="teleprompter-label">Transcrição em tempo real</span>
@@ -258,63 +158,29 @@ function App() {
           )}
 
           <div className="control-actions">
-            <button onClick={() => setShowSettings(!showSettings)} className="command-button command-button--ghost">
-              <svg className="command-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Configurações
+            <button onClick={() => setShowSettings(!showSettings)} className="link-button">
+              {showSettings ? 'Ocultar configurações' : 'Configurações'}
             </button>
-
-            <button onClick={exportJson} className="command-button command-button--primary">
-              <svg className="command-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Exportar
-            </button>
+            {hasContent && (
+              <button onClick={exportJson} className="link-button link-button--primary">
+                Exportar JSON
+              </button>
+            )}
           </div>
         </section>
 
         {showSettings && (
-          <div className="settings-panel neon-panel">
+          <div className="settings-panel surface">
             <Settings settings={settings} setSettings={setSettings} />
           </div>
         )}
-
-        {debugInfo.length > 0 && (
-          <div className="debug-panel neon-panel">
-            <div className="panel-header">
-              <h3 className="panel-title">🔍 Telemetria do Sistema</h3>
-              <p className="panel-subtitle">Acompanhe cada etapa da captura e processamento</p>
-            </div>
-            <div className="debug-stream">
-              {debugInfo.map((info, i) => (
-                <p key={i} className="debug-line">
-                  {info}
-                </p>
-              ))}
-            </div>
-            {transcriptFinal && (
-              <div className="debug-highlight">
-                <p className="debug-highlight__title">📝 Última transcrição processada</p>
-                <p className="debug-highlight__text">"{transcriptFinal}"</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <section className="feed-panel neon-panel">
+        <section className="feed-panel surface">
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Feed de Inteligência</h2>
-              <p className="panel-subtitle">Novos pulsos de informação a cada {settings.cadence} segundos</p>
+              <h2 className="panel-title">Blocos recentes</h2>
+              <p className="panel-subtitle">Insights e referências agrupados automaticamente a partir das conversas.</p>
             </div>
-            <span className="panel-badge">{feed.length} sessões</span>
+            {hasContent && <span className="panel-note">{feed.length} sessões</span>}
           </div>
           <Feed feed={feed} />
         </section>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore, type Settings, type FeedItem } from './store'
 import './index.css'
 import './speech-recognition.d.ts'
@@ -16,6 +16,19 @@ function App() {
   const [audioLevel, setAudioLevel] = useState(0)
   const [transcriptFinal, setTranscriptFinal] = useState('')
   const [debugInfo, setDebugInfo] = useState<string[]>([])
+
+  const totalInsights = useMemo(
+    () => feed.reduce((acc, item) => acc + (item.insights?.length ?? 0), 0),
+    [feed]
+  )
+  const totalTopics = useMemo(
+    () => feed.reduce((acc, item) => acc + (item.topics?.length ?? 0), 0),
+    [feed]
+  )
+  const openQuestions = useMemo(() => {
+    if (feed.length === 0) return 0
+    return feed[feed.length - 1].questions?.length ?? 0
+  }, [feed])
 
   const addDebugInfo = (message: string) => {
     const timestamp = new Date().toLocaleTimeString()
@@ -87,7 +100,6 @@ function App() {
       const transcript = Array.from(e.results).map((r) => r[0].transcript).join(' ')
       setCurrentTranscript(transcript)
 
-      // Simular nível de áudio baseado no comprimento da transcrição
       setAudioLevel(Math.min(transcript.length / 10, 10))
 
       if (e.results[e.results.length - 1].isFinal) {
@@ -98,7 +110,6 @@ function App() {
         orchestrator.postMessage({ type: 'transcript', text: transcript, offline })
         addDebugInfo('📤 Transcrição enviada para o orchestrator')
 
-        // Limpar transcrição temporária após envio
         setTimeout(() => {
           setCurrentTranscript('')
           setAudioLevel(0)
@@ -116,7 +127,6 @@ function App() {
     recognition.onend = () => {
       addDebugInfo('🔴 Reconhecimento de voz finalizado')
       if (listening) {
-        // Reiniciar automaticamente se ainda estiver no modo listening
         setTimeout(() => recognition.start(), 100)
       }
     }
@@ -146,188 +156,168 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  const statusNarrative = processingStatus || (listening ? '🎧 Imersão ativa' : '🛋️ Aguardando conversas')
+
   return (
-    <div className="min-h-screen" style={{background: 'linear-gradient(to bottom right, #111827, #1f2937, #111827)'}}>
-      <div className="max-w-6xl mx-auto p-6">
-        {/* Header */}
-        <header className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2 text-gradient">
-            Insider Agent
-          </h1>
-          <p className="text-gray-400">
-            Inteligência em tempo real para suas conversas
-          </p>
+    <div className="app-shell">
+      <div className="aurora-layer aurora-layer--1" />
+      <div className="aurora-layer aurora-layer--2" />
+      <div className="aurora-layer aurora-layer--3" />
+      <div className="grid-overlay" />
+      <div className="orb orb--one" />
+      <div className="orb orb--two" />
+
+      <div className="app-container">
+        <header className="app-header neon-panel">
+          <div className="app-header__intro">
+            <span className="app-eyebrow">Radar conversacional em tempo real</span>
+            <h1 className="app-title">Insider Agent</h1>
+            <p className="app-lead">
+              Inteligência maximalista para transformar fala em estratégia instantânea. Mantenha sua equipe sincronizada com insights em
+              3D, sem perder o ritmo da conversa.
+            </p>
+          </div>
+          <div className="metric-wall">
+            <div className="metric-card">
+              <span className="metric-label">Conexão</span>
+              <p className={`metric-value ${offline ? 'metric-value--danger' : ''}`}>{offline ? 'Offline' : 'Online'}</p>
+              <span className="metric-legend">
+                {offline ? 'Reconecte para novas coletas' : 'Sincronizado com a nuvem'}
+              </span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">Insights gerados</span>
+              <p className="metric-value">{totalInsights}</p>
+              <span className="metric-legend">{feed.length} análises completas</span>
+            </div>
+            <div className="metric-card">
+              <span className="metric-label">Tópicos mapeados</span>
+              <p className="metric-value">{totalTopics}</p>
+              <span className="metric-legend">{openQuestions} questões em aberto</span>
+            </div>
+          </div>
         </header>
 
-        {/* Status Bar */}
-        <div className="mb-6 flex items-center justify-center gap-4 flex-wrap">
-          <div className={`status-indicator ${offline ? 'border-red-500/50' : 'border-green-500/50'}`}>
-            <span className={`w-2 h-2 rounded-full ${offline ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></span>
-            <span className="text-xs">{offline ? 'Offline' : 'Online'}</span>
+        <section className="status-dock">
+          <div className={`status-pill ${offline ? 'status-pill--offline' : 'status-pill--online'}`}>
+            <span className="status-lamp" />
+            <span>{offline ? 'Modo offline' : 'Conexão estável'}</span>
+          </div>
+
+          <div className="status-pill status-pill--narrative">
+            <span className="status-glow" />
+            <span>{statusNarrative}</span>
           </div>
 
           {listening && (
-            <div className="status-indicator">
+            <div className="status-pill status-pill--listening">
               <div className="sound-wave">
-                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.1})`}}></span>
-                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.15})`}}></span>
-                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.2})`}}></span>
-                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.15})`}}></span>
-                <span style={{transform: `scaleY(${0.3 + audioLevel * 0.1})`}}></span>
+                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.1})` }} />
+                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.15})` }} />
+                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.2})` }} />
+                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.15})` }} />
+                <span style={{ transform: `scaleY(${0.3 + audioLevel * 0.1})` }} />
               </div>
-              <span className="text-xs">
-                {currentTranscript ? '🎙️ Capturando...' : '👂 Ouvindo...'}
-              </span>
+              <span className="status-text">{currentTranscript ? 'Capturando espectro' : 'Escuta ativa'}</span>
             </div>
           )}
 
           {processingStatus && (
-            <div className="status-indicator animate-pulse-slow">
-              <span className="text-xs">{processingStatus}</span>
+            <div className="status-pill status-pill--processing">
+              <span className="status-glow status-glow--pulse" />
+              <span>{processingStatus}</span>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Control Center */}
-        <div className="mb-6 card">
-          <div className="flex flex-col items-center gap-6">
-            {/* Main Control Button */}
-            <div style={{position: 'relative'}}>
-              {!listening ? (
-                <button
-                  onClick={start}
-                  style={{
-                    width: '96px',
-                    height: '96px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(to right, #059669, #10b981)',
-                    border: 'none',
-                    color: 'white',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                    transform: 'scale(1)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(to right, #047857, #059669)'
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(to right, #059669, #10b981)'
-                    e.currentTarget.style.transform = 'scale(1)'
-                  }}
-                >
-                  <svg style={{width: '40px', height: '40px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                </button>
+        <section className="control-panel neon-panel">
+          <div className={`control-orbit ${listening ? 'control-orbit--active' : ''}`}>
+            <button
+              onClick={listening ? stop : start}
+              className={`control-button ${listening ? 'control-button--listening' : 'control-button--idle'}`}
+            >
+              {listening ? (
+                <svg className="control-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                </svg>
               ) : (
-                <button
-                  onClick={stop}
-                  className="animate-pulse"
-                  style={{
-                    width: '96px',
-                    height: '96px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(to right, #dc2626, #e11d48)',
-                    border: 'none',
-                    color: 'white',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                    transform: 'scale(1)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(to right, #b91c1c, #be185d)'
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(to right, #dc2626, #e11d48)'
-                    e.currentTarget.style.transform = 'scale(1)'
-                  }}
-                >
-                  <svg style={{width: '40px', height: '40px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                  </svg>
-                </button>
+                <svg className="control-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
               )}
-              <p style={{textAlign: 'center', marginTop: '12px', fontSize: '14px', color: '#9ca3af'}}>
-                {listening ? 'Parar' : 'Iniciar'} Escuta
-              </p>
-            </div>
-
-            {/* Current Transcript Display */}
-            {currentTranscript && (
-              <div className="w-full max-w-2xl p-4 rounded-lg bg-black/20 border border-white/5">
-                <p className="text-sm text-gray-300 italic">"{currentTranscript}"</p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="btn-secondary flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Configurações
-              </button>
-
-              <button
-                onClick={exportJson}
-                className="btn-primary flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Exportar
-              </button>
-            </div>
+            </button>
+            <span className="control-hint">{listening ? 'Parar escuta' : 'Iniciar escuta'}</span>
           </div>
-        </div>
 
-        {/* Settings Panel */}
+          {currentTranscript && (
+            <div className="teleprompter">
+              <span className="teleprompter-label">Transcrição em tempo real</span>
+              <p className="teleprompter-text">"{currentTranscript}"</p>
+            </div>
+          )}
+
+          <div className="control-actions">
+            <button onClick={() => setShowSettings(!showSettings)} className="command-button command-button--ghost">
+              <svg className="command-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Configurações
+            </button>
+
+            <button onClick={exportJson} className="command-button command-button--primary">
+              <svg className="command-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Exportar
+            </button>
+          </div>
+        </section>
+
         {showSettings && (
-          <div className="mb-6 card">
+          <div className="settings-panel neon-panel">
             <Settings settings={settings} setSettings={setSettings} />
           </div>
         )}
 
-        {/* Debug Panel */}
         {debugInfo.length > 0 && (
-          <div className="mb-6 card">
-            <h3 className="text-lg font-semibold mb-3">🔍 Status do Sistema</h3>
-            <div className="space-y-1">
+          <div className="debug-panel neon-panel">
+            <div className="panel-header">
+              <h3 className="panel-title">🔍 Telemetria do Sistema</h3>
+              <p className="panel-subtitle">Acompanhe cada etapa da captura e processamento</p>
+            </div>
+            <div className="debug-stream">
               {debugInfo.map((info, i) => (
-                <p key={i} className="text-xs font-mono" style={{color: '#94a3b8'}}>
+                <p key={i} className="debug-line">
                   {info}
                 </p>
               ))}
             </div>
             {transcriptFinal && (
-              <div className="mt-4 p-3 rounded-lg" style={{backgroundColor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)'}}>
-                <p className="text-sm font-semibold text-green-400 mb-1">📝 Última Transcrição Processada:</p>
-                <p className="text-sm" style={{color: '#d1d5db'}}>"{transcriptFinal}"</p>
+              <div className="debug-highlight">
+                <p className="debug-highlight__title">📝 Última transcrição processada</p>
+                <p className="debug-highlight__text">"{transcriptFinal}"</p>
               </div>
             )}
           </div>
         )}
 
-        {/* Feed Display */}
-        <div className="card">
-          <h2 className="text-xl font-bold mb-4 text-gradient">Feed de Inteligência</h2>
+        <section className="feed-panel neon-panel">
+          <div className="panel-header">
+            <div>
+              <h2 className="panel-title">Feed de Inteligência</h2>
+              <p className="panel-subtitle">Novos pulsos de informação a cada {settings.cadence} segundos</p>
+            </div>
+            <span className="panel-badge">{feed.length} sessões</span>
+          </div>
           <Feed feed={feed} />
-        </div>
+        </section>
       </div>
     </div>
   )
@@ -335,50 +325,44 @@ function App() {
 
 function Settings({ settings, setSettings }: { settings: Settings; setSettings: (s: Partial<Settings>) => void }) {
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold mb-4">Configurações</h3>
+    <div className="settings-content">
+      <h3 className="panel-title">Configurações</h3>
+      <p className="panel-subtitle">Personalize o comportamento do agente e a cadência de análise</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            Cadência de Análise
-          </label>
+      <div className="settings-grid">
+        <label className="field-group">
+          <span className="field-label">Cadência de Análise</span>
           <select
             value={settings.cadence}
             onChange={(e) => setSettings({ cadence: Number(e.target.value) })}
-            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
+            className="neo-field"
           >
             <option value={10}>10 segundos</option>
             <option value={30}>30 segundos</option>
             <option value={60}>1 minuto</option>
           </select>
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            Idioma
-          </label>
+        <label className="field-group">
+          <span className="field-label">Idioma</span>
           <input
             value={settings.language}
             onChange={(e) => setSettings({ language: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
+            className="neo-field"
             placeholder="pt-BR"
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            OpenAI API Key
-          </label>
+        <label className="field-group">
+          <span className="field-label">OpenAI API Key</span>
           <input
             type="password"
             value={settings.openaiKey}
             onChange={(e) => setSettings({ openaiKey: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-sm focus:border-purple-500 focus:outline-none"
+            className="neo-field"
             placeholder="sk-..."
           />
-        </div>
-
+        </label>
       </div>
     </div>
   )
@@ -387,129 +371,108 @@ function Settings({ settings, setSettings }: { settings: Settings; setSettings: 
 function Feed({ feed }: { feed: FeedItem[] }) {
   if (feed.length === 0) {
     return (
-      <div className="text-center py-8">
-        <svg className="w-16 h-16 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <p className="text-gray-500 text-sm">Nenhuma análise ainda. Clique em "Iniciar Escuta" para começar.</p>
+      <div className="empty-state">
+        <div className="empty-icon">
+          <svg className="empty-icon__svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <p className="empty-title">Nenhuma análise ainda.</p>
+        <p className="empty-subtitle">Clique em "Iniciar escuta" para lançar a primeira órbita de insights.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {feed.slice().reverse().map((item) => (
-        <div
-          key={item.id}
-          className="p-4 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 transition-colors"
-        >
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-400">
-                📅 {new Date(item.timestamp).toLocaleString('pt-BR')}
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-gradient-to-r from-purple-900/20 to-indigo-900/20 border-l-4 border-purple-500">
-              <p className="text-sm text-gray-100 leading-relaxed">
-                {typeof item.summary === 'string' && !item.summary.includes('{')
-                  ? item.summary
-                  : 'Análise em processamento...'}
-              </p>
-            </div>
-          </div>
+    <div className="feed-stack">
+      {feed
+        .slice()
+        .reverse()
+        .map((item) => {
+          const questionCount = item.questions?.length ?? 0
+          return (
+            <article key={item.id} className="holo-card">
+              <header className="holo-card__header">
+                <span className="holo-card__timestamp">📅 {new Date(item.timestamp).toLocaleString('pt-BR')}</span>
+                {questionCount > 0 && <span className="chip chip--warning">{questionCount} questões</span>}
+              </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            {/* Topics */}
-            <div>
-              <h4 className="font-semibold text-purple-400 mb-2 flex items-center gap-1">
-                <span>🏷️</span> Tópicos
-              </h4>
-              <div className="flex flex-wrap gap-1">
-                {item.topics && item.topics.length > 0 ? (
-                  item.topics.map((topic, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 text-xs"
-                    >
-                      {typeof topic === 'string' ? topic : 'Processando...'}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-gray-500 italic">Identificando tópicos...</span>
-                )}
+              <div className="holo-card__summary">
+                <p>
+                  {typeof item.summary === 'string' && !item.summary.includes('{')
+                    ? item.summary
+                    : 'Análise em processamento...'}
+                </p>
               </div>
-            </div>
 
-            {/* News */}
-            <div>
-              <h4 className="font-semibold text-blue-400 mb-2 flex items-center gap-1">
-                <span>📰</span> Informações
-              </h4>
-              <div className="space-y-2">
-                {item.news && item.news.length > 0 ? (
-                  item.news.slice(0, 3).map((n, i) => (
-                    <a
-                      key={i}
-                      href={n.url !== '#' ? n.url : undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block p-2 rounded bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
-                    >
-                      <p className="text-blue-300 text-xs leading-relaxed">
-                        {n.title}
-                      </p>
-                    </a>
-                  ))
-                ) : (
-                  <div className="p-2 rounded bg-gray-800/50">
-                    <p className="text-gray-400 text-xs italic">Gerando informações relevantes...</p>
+              <div className="holo-card__body">
+                <div className="info-column">
+                  <h4 className="info-column__title">🏷️ Tópicos</h4>
+                  <div className="info-column__content info-column__content--wrap">
+                    {item.topics && item.topics.length > 0 ? (
+                      item.topics.map((topic, i) => (
+                        <span key={i} className="chip chip--topic">
+                          {typeof topic === 'string' ? topic : 'Processando...'}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="chip chip--ghost">Identificando tópicos...</span>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Insights */}
-            <div>
-              <h4 className="font-semibold text-green-400 mb-2 flex items-center gap-1">
-                <span>💡</span> Insights
-              </h4>
-              <div className="space-y-2">
-                {item.insights && item.insights.length > 0 ? (
-                  item.insights.map((insight, i) => (
-                    <div key={i} className="p-2 rounded bg-green-500/10 border-l-2 border-green-500">
-                      <p className="text-gray-200 text-xs leading-relaxed">
-                        {insight}
-                      </p>
+                <div className="info-column">
+                  <h4 className="info-column__title">📰 Informações</h4>
+                  <div className="info-column__content info-column__content--stacked">
+                    {item.news && item.news.length > 0 ? (
+                      item.news.slice(0, 3).map((n, i) => (
+                        <a
+                          key={i}
+                          href={n.url !== '#' ? n.url : undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="glow-link"
+                        >
+                          <span className="glow-link__accent" />
+                          <p>{n.title}</p>
+                        </a>
+                      ))
+                    ) : (
+                      <span className="chip chip--ghost">Gerando informações relevantes...</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="info-column">
+                  <h4 className="info-column__title">💡 Insights</h4>
+                  <div className="info-column__content info-column__content--stacked">
+                    {item.insights && item.insights.length > 0 ? (
+                      item.insights.map((insight, i) => (
+                        <div key={i} className="insight-pill">
+                          <span className="insight-pill__beam" />
+                          <p>{insight}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="chip chip--ghost">Analisando contexto...</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {item.questions && item.questions.length > 0 && (
+                <div className="question-grid">
+                  {item.questions.map((q, i) => (
+                    <div key={i} className="question-chip">
+                      <span className="question-chip__icon">❓</span>
+                      <p>{typeof q === 'string' ? q : 'Processando...'}</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="p-2 rounded bg-gray-800/50">
-                    <p className="text-gray-400 text-xs italic">Analisando contexto...</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Questions */}
-          {item.questions && item.questions.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <h4 className="text-xs font-semibold text-yellow-400 mb-2 flex items-center gap-1">
-                <span>❓</span> Questões Levantadas
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {item.questions.map((q, i) => (
-                  <div key={i} className="p-2 rounded bg-yellow-500/10 border-l-2 border-yellow-500">
-                    <p className="text-xs text-gray-300">
-                      {typeof q === 'string' ? q : 'Processando...'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
+                  ))}
+                </div>
+              )}
+            </article>
+          )
+        })}
     </div>
   )
 }

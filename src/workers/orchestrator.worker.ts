@@ -46,7 +46,7 @@ async function processBuffer() {
   }
 
   buffer = ''
-  let result = {
+  const result = {
     summary: '',
     topics: [] as string[],
     intents: [] as string[],
@@ -118,9 +118,10 @@ async function processBuffer() {
         result.intents = ['Discussão geral']
         result.questions = ['O que mais você gostaria de saber?']
       }
-    } catch (fetchError: any) {
+    } catch (fetchError: unknown) {
       console.error('[Orchestrator] Fetch Error:', fetchError)
-      result.summary = `Erro de conexão: ${fetchError.message || 'Erro desconhecido'}`
+      const message = fetchError instanceof Error ? fetchError.message : String(fetchError)
+      result.summary = `Erro de conexão: ${message || 'Erro desconhecido'}`
     }
   }
 

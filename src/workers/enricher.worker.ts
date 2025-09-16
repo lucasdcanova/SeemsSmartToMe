@@ -6,6 +6,16 @@ interface EnrichMessage {
   offline: boolean
 }
 
+interface EnrichmentNewsItem {
+  title: string
+  url?: string
+}
+
+interface EnrichmentResponse {
+  insights?: unknown
+  news?: unknown
+}
+
 // Timeout promise helper
 const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   return Promise.race([
@@ -15,6 +25,25 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
     )
   ])
 }
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(item => typeof item === 'string')
+
+const isEnrichmentNewsArray = (value: unknown): value is EnrichmentNewsItem[] =>
+  Array.isArray(value) &&
+  value.every((item) => {
+    if (typeof item !== 'object' || item === null) {
+      return false
+    }
+
+    const candidate = item as Record<string, unknown>
+    const hasValidTitle = typeof candidate.title === 'string' && candidate.title.trim().length > 0
+    const hasValidUrl =
+      candidate.url === undefined ||
+      (typeof candidate.url === 'string' && candidate.url.trim().length > 0)
+
+    return hasValidTitle && hasValidUrl
+  })
 
 self.onmessage = async (e: MessageEvent<EnrichMessage>) => {
   const { topics, openaiKey, offline, id } = e.data
@@ -119,26 +148,35 @@ IMPORTANTE: Responda APENAS em JSON válido, sem markdown:
       // Clean markdown if present
       content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
 
-      const parsed = JSON.parse(content)
-      console.log('[Enricher] Successfully parsed response')
+      const rawParsed = JSON.parse(content) as unknown
 
-      // Add insights
-      if (parsed.insights && Array.isArray(parsed.insights)) {
-        insights.push(...parsed.insights.filter((i: any) => i && i.length > 0))
+      if (typeof rawParsed !== 'object' || rawParsed === null) {
+        throw new Error('Invalid enrichment payload')
       }
 
-      // Add news with proper URLs
-      if (parsed.news && Array.isArray(parsed.news)) {
-        parsed.news.forEach((item: any) => {
-          if (item.title) {
-            // Ensure URL is valid
-            let url = item.url || '#'
-            if (!url.startsWith('http')) {
-              // Create Google search URL from title
-              url = `https://www.google.com/search?q=${encodeURIComponent(item.title)}`
-            }
-            news.push({ title: item.title, url })
+      console.log('[Enricher] Successfully parsed response')
+      const parsed = rawParsed as EnrichmentResponse
+
+      if (isStringArray(parsed.insights)) {
+        const validInsights = parsed.insights
+          .map(insight => insight.trim())
+          .filter((insight) => insight.length > 0)
+        insights.push(...validInsights)
+      }
+
+      if (isEnrichmentNewsArray(parsed.news)) {
+        parsed.news.forEach((item) => {
+          const title = item.title.trim()
+          if (title.length === 0) {
+            return
           }
+
+          let url = item.url ?? '#'
+          if (!url.startsWith('http')) {
+            url = `https://www.google.com/search?q=${encodeURIComponent(title)}`
+          }
+
+          news.push({ title, url })
         })
       }
     } catch (parseError) {

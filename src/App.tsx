@@ -34,18 +34,18 @@ function App() {
 
   useEffect(() => {
     orchestrator.onmessage = (e) => {
-      setProcessingStatus('Analisando contexto...')
+      setProcessingStatus('Gerando resumo...')
       const { summary, topics, intents, questions } = e.data
 
       const id = Date.now()
       addFeedItem({ id, summary, topics, intents, questions, news: [], insights: [], timestamp: Date.now() })
 
-      setProcessingStatus('Gerando insights...')
+      setProcessingStatus('Buscando referências...')
       enricher.postMessage({ type: 'enrich', id, topics, openaiKey: settings.openaiKey, offline })
     }
 
     enricher.onmessage = (e) => {
-      setProcessingStatus('Finalizando...')
+      setProcessingStatus('Resumo pronto.')
       const { id, news, insights } = e.data
       updateFeedItem(id, { news, insights })
       setTimeout(() => setProcessingStatus(''), 2000)
@@ -55,7 +55,7 @@ function App() {
   const start = () => {
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognitionClass) {
-      setProcessingStatus('Reconhecimento de voz não suportado neste navegador')
+      setProcessingStatus('Este navegador não suporta reconhecimento de voz.')
       return
     }
 
@@ -65,7 +65,7 @@ function App() {
     recognition.interimResults = true
 
     recognition.onstart = () => {
-      setProcessingStatus('Ouvindo...')
+      setProcessingStatus('Escutando...')
     }
 
     recognition.onresult = (e) => {
@@ -73,7 +73,7 @@ function App() {
       setCurrentTranscript(transcript)
 
       if (e.results[e.results.length - 1].isFinal) {
-        setProcessingStatus('Enviando para análise...')
+        setProcessingStatus('Mandando para resumo...')
 
         orchestrator.postMessage({ type: 'transcript', text: transcript, offline })
 
@@ -84,7 +84,7 @@ function App() {
     }
 
     recognition.onerror = (e: any) => {
-      setProcessingStatus(e.error ? `Erro: ${e.error}` : 'Erro no reconhecimento de voz')
+      setProcessingStatus(e.error ? `Falha: ${e.error}` : 'Falha no reconhecimento de voz.')
     }
 
     recognition.onend = () => {
@@ -119,51 +119,73 @@ function App() {
   return (
     <div className="app-shell">
       <div className="app-container">
-        <header className="app-header surface app-header--minimal">
-          <span className="app-eyebrow">Remember everything. Organize nothing.</span>
-          <h1 className="app-title">Seems Smart to Me</h1>
-          <p className="app-lead">
-            Captura discreta de conversas e ideias, com insights organizados automaticamente. Nenhum feed social, nenhuma distração —
-            apenas o seu conteúdo.
-          </p>
+        <header className="app-header surface app-header--hero">
+          <div className="hero-copy">
+            <span className="app-eyebrow">Captura. Resume. Conecta.</span>
+            <h1 className="app-title">Agente Insider</h1>
+            <p className="app-lead">Escuta suas conversas, gera resumos rápidos e traz links confiáveis. Sem ruído.</p>
+          </div>
+
+          <div className="hero-console">
+            <button
+              onClick={listening ? stop : start}
+              className={`hero-cta ${listening ? 'hero-cta--listening' : ''}`}
+              aria-pressed={listening}
+            >
+              <span className="hero-cta__icon" aria-hidden="true">
+                {listening ? (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                ) : (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                )}
+              </span>
+              <span className="hero-cta__label">{listening ? 'Parar' : 'Ouvir'}</span>
+            </button>
+
+            <div className="hero-status-strip">
+              <span className={`hero-status ${offline ? 'hero-status--offline' : 'hero-status--online'}`}>
+                <span className="hero-status__dot" aria-hidden="true" />
+                <span className="hero-status__label">{offline ? 'Offline' : 'Online'}</span>
+              </span>
+              <span className={`hero-status hero-status--pill ${listening ? 'hero-status--recording' : ''}`}>
+                <span className="hero-status__dot" aria-hidden="true" />
+                <span className="hero-status__label">{listening ? 'Gravando' : 'Pronto'}</span>
+              </span>
+              <span className={`hero-status hero-status--signal ${currentTranscript ? 'hero-status--signal-active' : ''}`}>
+                <span className="hero-waves" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                <span className="hero-status__label">Áudio</span>
+              </span>
+            </div>
+          </div>
         </header>
 
         <section className="control-panel surface">
-          <div className={`control-orbit ${listening ? 'control-orbit--active' : ''}`}>
-            <button
-              onClick={listening ? stop : start}
-              className={`control-button ${listening ? 'control-button--listening' : 'control-button--idle'}`}
-            >
-              {listening ? (
-                <svg className="control-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                </svg>
-              ) : (
-                <svg className="control-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              )}
-            </button>
-            <span className="control-hint">{listening ? 'Parar escuta' : 'Iniciar escuta'}</span>
-          </div>
 
           {processingStatus && <p className="status-inline">{processingStatus}</p>}
 
           {currentTranscript && (
             <div className="teleprompter">
-              <span className="teleprompter-label">Transcrição em tempo real</span>
+              <span className="teleprompter-label">Transcrição ao vivo</span>
               <p className="teleprompter-text">"{currentTranscript}"</p>
             </div>
           )}
 
           <div className="control-actions">
             <button onClick={() => setShowSettings(!showSettings)} className="link-button">
-              {showSettings ? 'Ocultar configurações' : 'Configurações'}
+              {showSettings ? 'Ocultar ajustes' : 'Ajustes'}
             </button>
             {hasContent && (
               <button onClick={exportJson} className="link-button link-button--primary">
-                Exportar JSON
+                Exportar histórico
               </button>
             )}
           </div>
@@ -177,10 +199,10 @@ function App() {
         <section className="feed-panel surface">
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Blocos recentes</h2>
-              <p className="panel-subtitle">Insights e referências agrupados automaticamente a partir das conversas.</p>
+              <h2 className="panel-title">Sessões recentes</h2>
+              <p className="panel-subtitle">Resumos automáticos com tópicos, fontes e perguntas.</p>
             </div>
-            {hasContent && <span className="panel-note">{feed.length} sessões</span>}
+            {hasContent && <span className="panel-note">{feed.length} blocos</span>}
           </div>
           <Feed feed={feed} />
         </section>
@@ -192,12 +214,12 @@ function App() {
 function Settings({ settings, setSettings }: { settings: Settings; setSettings: (s: Partial<Settings>) => void }) {
   return (
     <div className="settings-content">
-      <h3 className="panel-title">Configurações</h3>
-      <p className="panel-subtitle">Personalize o comportamento do agente e a cadência de análise</p>
+      <h3 className="panel-title">Ajustes</h3>
+      <p className="panel-subtitle">Defina cadência, idioma e chave de API.</p>
 
       <div className="settings-grid">
         <label className="field-group">
-          <span className="field-label">Cadência de Análise</span>
+          <span className="field-label">Cadência do resumo</span>
           <select
             value={settings.cadence}
             onChange={(e) => setSettings({ cadence: Number(e.target.value) })}
@@ -210,7 +232,7 @@ function Settings({ settings, setSettings }: { settings: Settings; setSettings: 
         </label>
 
         <label className="field-group">
-          <span className="field-label">Idioma</span>
+          <span className="field-label">Idioma da captura</span>
           <input
             value={settings.language}
             onChange={(e) => setSettings({ language: e.target.value })}
@@ -220,7 +242,7 @@ function Settings({ settings, setSettings }: { settings: Settings; setSettings: 
         </label>
 
         <label className="field-group">
-          <span className="field-label">OpenAI API Key</span>
+          <span className="field-label">Chave OpenAI</span>
           <input
             type="password"
             value={settings.openaiKey}
@@ -243,8 +265,8 @@ function Feed({ feed }: { feed: FeedItem[] }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <p className="empty-title">Nenhuma análise ainda.</p>
-        <p className="empty-subtitle">Clique em "Iniciar escuta" para lançar a primeira órbita de insights.</p>
+        <p className="empty-title">Ainda sem resumos.</p>
+        <p className="empty-subtitle">Ative "Ouvir" para gerar o primeiro bloco.</p>
       </div>
     )
   }
@@ -260,35 +282,35 @@ function Feed({ feed }: { feed: FeedItem[] }) {
             <article key={item.id} className="holo-card">
               <header className="holo-card__header">
                 <span className="holo-card__timestamp">📅 {new Date(item.timestamp).toLocaleString('pt-BR')}</span>
-                {questionCount > 0 && <span className="chip chip--warning">{questionCount} questões</span>}
+                {questionCount > 0 && <span className="chip chip--warning">{questionCount} perguntas</span>}
               </header>
 
               <div className="holo-card__summary">
                 <p>
                   {typeof item.summary === 'string' && !item.summary.includes('{')
                     ? item.summary
-                    : 'Análise em processamento...'}
+                    : 'Processando resumo...'}
                 </p>
               </div>
 
               <div className="holo-card__body">
                 <div className="info-column">
-                  <h4 className="info-column__title">🏷️ Tópicos</h4>
+                  <h4 className="info-column__title">🏷️ Tópicos-chave</h4>
                   <div className="info-column__content info-column__content--wrap">
                     {item.topics && item.topics.length > 0 ? (
                       item.topics.map((topic, i) => (
                         <span key={i} className="chip chip--topic">
-                          {typeof topic === 'string' ? topic : 'Processando...'}
+                          {typeof topic === 'string' ? topic : 'Gerando...'}
                         </span>
                       ))
                     ) : (
-                      <span className="chip chip--ghost">Identificando tópicos...</span>
+                      <span className="chip chip--ghost">Buscando tópicos...</span>
                     )}
                   </div>
                 </div>
 
                 <div className="info-column">
-                  <h4 className="info-column__title">📰 Informações</h4>
+                  <h4 className="info-column__title">📰 Fontes</h4>
                   <div className="info-column__content info-column__content--stacked">
                     {item.news && item.news.length > 0 ? (
                       item.news.slice(0, 3).map((n, i) => (
@@ -304,13 +326,13 @@ function Feed({ feed }: { feed: FeedItem[] }) {
                         </a>
                       ))
                     ) : (
-                      <span className="chip chip--ghost">Gerando informações relevantes...</span>
+                      <span className="chip chip--ghost">Coletando fontes...</span>
                     )}
                   </div>
                 </div>
 
                 <div className="info-column">
-                  <h4 className="info-column__title">💡 Insights</h4>
+                  <h4 className="info-column__title">💡 Insights rápidos</h4>
                   <div className="info-column__content info-column__content--stacked">
                     {item.insights && item.insights.length > 0 ? (
                       item.insights.map((insight, i) => (
@@ -320,7 +342,7 @@ function Feed({ feed }: { feed: FeedItem[] }) {
                         </div>
                       ))
                     ) : (
-                      <span className="chip chip--ghost">Analisando contexto...</span>
+                      <span className="chip chip--ghost">Extraindo insights...</span>
                     )}
                   </div>
                 </div>
@@ -331,7 +353,7 @@ function Feed({ feed }: { feed: FeedItem[] }) {
                   {item.questions.map((q, i) => (
                     <div key={i} className="question-chip">
                       <span className="question-chip__icon">❓</span>
-                      <p>{typeof q === 'string' ? q : 'Processando...'}</p>
+                      <p>{typeof q === 'string' ? q : 'Gerando...'}</p>
                     </div>
                   ))}
                 </div>

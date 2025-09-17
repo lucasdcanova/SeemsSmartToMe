@@ -26,9 +26,9 @@ self.onmessage = async (e: MessageEvent<EnrichMessage>) => {
   // Quick return for empty topics
   if (!topics || topics.length === 0) {
     console.log('[Enricher] No topics provided, using default content')
-    insights.push('Aguardando tópicos para análise detalhada')
+    insights.push('Aguardando tópicos para enriquecer')
     news.push({
-      title: 'Nenhum tópico identificado para busca',
+      title: 'Nenhum tópico para pesquisar',
       url: '#'
     })
     ;(self as unknown as Worker).postMessage({ id, news, insights })
@@ -41,13 +41,13 @@ self.onmessage = async (e: MessageEvent<EnrichMessage>) => {
 
     // Generate contextual insights even without API
     topics.forEach(topic => {
-      insights.push(`📊 ${topic}: Este é um tópico importante que merece análise aprofundada`)
+      insights.push(`📊 ${topic}: insight gerado offline`)
     })
 
     // Generate search links for each topic
     topics.slice(0, 3).forEach(topic => {
       news.push({
-        title: `🔍 Pesquisar mais sobre: ${topic}`,
+        title: `🔍 Pesquisar ${topic}`,
         url: `https://www.google.com/search?q=${encodeURIComponent(topic + ' notícias Brasil')}`
       })
     })
@@ -152,14 +152,14 @@ IMPORTANTE: Responda APENAS em JSON válido, sem markdown:
   } catch (error) {
     console.error('[Enricher] API call failed:', error)
     // Generate fallback content on error
-    insights.push(`⚠️ Não foi possível obter análise completa dos tópicos: ${topics.slice(0, 2).join(', ')}`)
+    insights.push(`⚠️ Não foi possível enriquecer: ${topics.slice(0, 2).join(', ')}`)
   }
 
   // Ensure we always have meaningful content
   if (insights.length === 0) {
     console.log('[Enricher] No insights generated, adding defaults')
     topics.forEach((topic) => {
-      insights.push(`💭 ${topic} é um assunto relevante que está em discussão`)
+      insights.push(`💭 ${topic}: mantenha no radar`)
     })
   }
 
@@ -167,7 +167,7 @@ IMPORTANTE: Responda APENAS em JSON válido, sem markdown:
     console.log('[Enricher] No news generated, adding search links')
     topics.slice(0, 3).forEach(topic => {
       news.push({
-        title: `📰 Buscar notícias sobre: ${topic}`,
+        title: `📰 Pesquisar notícias: ${topic}`,
         url: `https://news.google.com/search?q=${encodeURIComponent(topic)}&hl=pt-BR`
       })
     })

@@ -103,13 +103,12 @@ async function processBuffer() {
         console.error('[Orchestrator] JSON Parse Error:', parseError)
         // Fallback: extract what we can from the response
         const content = data.choices?.[0]?.message?.content || ''
-        const fallback = Array.from(
-          new Set(
-            content
-              .split(/[^\p{L}\p{N}]+/u)
-              .filter((word: string) => word.length > 4)
-          )
+        const fallbackSet = new Set<string>(
+          content
+            .split(/[^\p{L}\p{N}]+/u)
+            .filter((word: string) => word.length > 4)
         )
+        const fallback = Array.from(fallbackSet)
         result.topics = fallback.length > 0 ? fallback.slice(0, 5) : extractKeywordsLocal(text)
       }
     } catch (fetchError) {

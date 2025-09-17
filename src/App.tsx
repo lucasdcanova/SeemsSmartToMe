@@ -15,12 +15,9 @@ function App() {
   const [currentTranscript, setCurrentTranscript] = useState('')
   const [processingStatus, setProcessingStatus] = useState('')
   const hasContent = useMemo(() => feed.length > 0, [feed])
-  const audioWaveActive = listening || Boolean(currentTranscript)
-  const audioWaveSpeaking = Boolean(currentTranscript)
 
   useEffect(() => {
     loadCachedFeed()
-    orchestrator.postMessage({ type: 'init', cadence: settings.cadence, language: settings.language, openaiKey: settings.openaiKey })
     const handleOnline = () => setOffline(false)
     const handleOffline = () => setOffline(true)
     window.addEventListener('online', handleOnline)
@@ -29,7 +26,7 @@ function App() {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [])
+  }, [loadCachedFeed, setOffline])
 
   useEffect(() => {
     orchestrator.postMessage({ type: 'init', cadence: settings.cadence, language: settings.language, openaiKey: settings.openaiKey })
@@ -37,23 +34,23 @@ function App() {
 
   useEffect(() => {
     orchestrator.onmessage = (e) => {
-      setProcessingStatus('Gerando resumo...')
-      const { summary, topics, intents, questions } = e.data
+      setProcessingStatus('Mapeando assuntos...')
+      const { topics } = e.data
 
       const id = Date.now()
-      addFeedItem({ id, summary, topics, intents, questions, news: [], insights: [], timestamp: Date.now() })
+      addFeedItem({ id, topics, news: [], insights: [], timestamp: Date.now() })
 
-      setProcessingStatus('Buscando referências...')
+      setProcessingStatus('Buscando notícias...')
       enricher.postMessage({ type: 'enrich', id, topics, openaiKey: settings.openaiKey, offline })
     }
 
     enricher.onmessage = (e) => {
-      setProcessingStatus('Resumo pronto.')
+      setProcessingStatus('Atualizações prontas.')
       const { id, news, insights } = e.data
       updateFeedItem(id, { news, insights })
       setTimeout(() => setProcessingStatus(''), 2000)
     }
-  }, [settings.openaiKey, offline])
+  }, [settings.openaiKey, offline, addFeedItem, updateFeedItem])
 
   const start = () => {
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -76,7 +73,7 @@ function App() {
       setCurrentTranscript(transcript)
 
       if (e.results[e.results.length - 1].isFinal) {
-        setProcessingStatus('Mandando para resumo...')
+        setProcessingStatus('Enviando para análise...')
 
         orchestrator.postMessage({ type: 'transcript', text: transcript, offline })
 
@@ -86,8 +83,9 @@ function App() {
       }
     }
 
-    recognition.onerror = (e: any) => {
-      setProcessingStatus(e.error ? `Falha: ${e.error}` : 'Falha no reconhecimento de voz.')
+    recognition.onerror = (event) => {
+      const errorMessage = (event as SpeechRecognitionErrorEvent)?.error
+      setProcessingStatus(errorMessage ? `Falha: ${errorMessage}` : 'Falha no reconhecimento de voz.')
     }
 
     recognition.onend = () => {
@@ -122,59 +120,42 @@ function App() {
   return (
     <div className="app-shell">
       <div className="app-container">
-        <header className="app-header surface app-header--hero">
+        <header className="app-header surface app-header--minimal">
           <div className="hero-copy">
-            <span className="app-eyebrow">Captura. Resume. Conecta.</span>
-            <h1 className="app-title">Agente Insider</h1>
-            <p className="app-lead">Escuta suas conversas, gera resumos rápidos e traz links confiáveis. Sem ruído.</p>
-
-            <div className="hero-copy__cta">
-              <button
-                type="button"
-                onClick={listening ? stop : start}
-                className={`hero-cta ${listening ? 'hero-cta--listening' : ''}`}
-                aria-pressed={listening}
-              >
-                <span className="hero-cta__icon" aria-hidden="true">
-                  {listening ? (
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                    </svg>
-                  ) : (
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                  )}
-                </span>
-                <span className="hero-cta__label">{listening ? 'Parar captura' : 'Iniciar gravação'}</span>
-              </button>
-
-              <span className="hero-copy__cta-hint">Inicie quando quiser. O agente captura e resume em segundos.</span>
-            </div>
+            <h1 className="app-title">Radar Insider</h1>
+            <p className="app-lead">Capta o que é dito e entrega apenas notícias e pontos úteis.</p>
           </div>
 
-          <div className="hero-console">
+          <div className="hero-actions">
+            <button
+              type="button"
+              onClick={listening ? stop : start}
+              className={`hero-cta ${listening ? 'hero-cta--listening' : ''}`}
+              aria-pressed={listening}
+            >
+              <span className="hero-cta__icon" aria-hidden="true">
+                {listening ? (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                ) : (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                )}
+              </span>
+              <span className="hero-cta__label">{listening ? 'Parar captura' : 'Ouvir agora'}</span>
+            </button>
+
             <div className="hero-status-board" role="status" aria-live="polite">
               <span className={`status-chip ${offline ? 'status-chip--offline' : 'status-chip--online'}`}>
                 <span className="status-chip__dot" aria-hidden="true" />
-                <span className="status-chip__label">{offline ? 'Offline' : 'Conectado'}</span>
+                <span className="status-chip__label">{offline ? 'Offline' : 'Ao vivo'}</span>
               </span>
               <span className={`status-chip ${listening ? 'status-chip--recording' : ''}`}>
                 <span className={`status-chip__dot ${listening ? 'status-chip__dot--amber' : ''}`} aria-hidden="true" />
-                <span className="status-chip__label">{listening ? 'Gravando' : 'Em espera'}</span>
-              </span>
-              <span
-                className={`status-chip status-chip--wave${audioWaveActive ? ' status-chip--wave-active' : ''}${
-                  audioWaveSpeaking ? ' status-chip--wave-speaking' : ''
-                }`}
-              >
-                <span className="mini-wave" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
-                <span className="status-chip__label">Áudio</span>
+                <span className="status-chip__label">{listening ? 'Gravando' : 'Pronto'}</span>
               </span>
             </div>
           </div>
@@ -227,10 +208,10 @@ function App() {
           <section className="feed-panel surface">
             <div className="panel-header">
               <div>
-                <h2 className="panel-title">Histórico de resumos</h2>
-                <p className="panel-subtitle">Revise blocos anteriores com tópicos, fontes e perguntas.</p>
+                <h2 className="panel-title">Atualizações capturadas</h2>
+                <p className="panel-subtitle">Veja os temas detectados e as notícias sugeridas.</p>
               </div>
-              {hasContent && <span className="panel-note">{feed.length} blocos</span>}
+              {hasContent && <span className="panel-note">{feed.length} registros</span>}
             </div>
             <Feed feed={feed} />
           </section>
@@ -248,7 +229,7 @@ function Settings({ settings, setSettings }: { settings: Settings; setSettings: 
 
       <div className="settings-grid">
         <label className="field-group">
-          <span className="field-label">Cadência do resumo</span>
+          <span className="field-label">Cadência da análise</span>
           <select
             value={settings.cadence}
             onChange={(e) => setSettings({ cadence: Number(e.target.value) })}
@@ -291,11 +272,11 @@ function Feed({ feed }: { feed: FeedItem[] }) {
       <div className="empty-state">
         <div className="empty-icon">
           <svg className="empty-icon__svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h10M4 18h16" />
           </svg>
         </div>
-        <p className="empty-title">Ainda sem resumos.</p>
-        <p className="empty-subtitle">Ative "Ouvir" para gerar o primeiro bloco.</p>
+        <p className="empty-title">Nenhuma notícia ainda.</p>
+        <p className="empty-subtitle">Ative "Ouvir agora" para gerar a primeira captura.</p>
       </div>
     )
   }
@@ -306,26 +287,15 @@ function Feed({ feed }: { feed: FeedItem[] }) {
         .slice()
         .reverse()
         .map((item) => {
-          const questionCount = item.questions?.length ?? 0
           return (
             <article key={item.id} className="holo-card">
               <header className="holo-card__header">
-                <span className="holo-card__timestamp">📅 {new Date(item.timestamp).toLocaleString('pt-BR')}</span>
-                {questionCount > 0 && <span className="chip chip--warning">{questionCount} perguntas</span>}
+                <span className="holo-card__timestamp">{new Date(item.timestamp).toLocaleString('pt-BR')}</span>
               </header>
-
-              <div className="holo-card__summary">
-                <p>
-                  {typeof item.summary === 'string' && !item.summary.includes('{')
-                    ? item.summary
-                    : 'Processando resumo...'}
-                </p>
-              </div>
-
-              <div className="holo-card__body">
-                <div className="info-column">
-                  <h4 className="info-column__title">🏷️ Tópicos-chave</h4>
-                  <div className="info-column__content info-column__content--wrap">
+              <div className="card-grid">
+                <div className="card-block">
+                  <h4 className="card-block__title">Assuntos detectados</h4>
+                  <div className="chip-row">
                     {item.topics && item.topics.length > 0 ? (
                       item.topics.map((topic, i) => (
                         <span key={i} className="chip chip--topic">
@@ -333,14 +303,27 @@ function Feed({ feed }: { feed: FeedItem[] }) {
                         </span>
                       ))
                     ) : (
-                      <span className="chip chip--ghost">Buscando tópicos...</span>
+                      <span className="chip chip--ghost">Capturando temas...</span>
                     )}
                   </div>
                 </div>
 
-                <div className="info-column">
-                  <h4 className="info-column__title">📰 Fontes</h4>
-                  <div className="info-column__content info-column__content--stacked">
+                <div className="card-block">
+                  <h4 className="card-block__title">Informações rápidas</h4>
+                  <div className="list-stack">
+                    {item.insights && item.insights.length > 0 ? (
+                      item.insights.map((insight, i) => (
+                        <p key={i} className="list-item">{insight}</p>
+                      ))
+                    ) : (
+                      <p className="list-item list-item--muted">Gerando apontamentos...</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="card-block">
+                  <h4 className="card-block__title">Notícias sugeridas</h4>
+                  <div className="list-stack">
                     {item.news && item.news.length > 0 ? (
                       item.news.slice(0, 3).map((n, i) => (
                         <a
@@ -348,45 +331,17 @@ function Feed({ feed }: { feed: FeedItem[] }) {
                           href={n.url !== '#' ? n.url : undefined}
                           target="_blank"
                           rel="noreferrer"
-                          className="glow-link"
+                          className="list-link"
                         >
-                          <span className="glow-link__accent" />
-                          <p>{n.title}</p>
+                          {n.title}
                         </a>
                       ))
                     ) : (
-                      <span className="chip chip--ghost">Coletando fontes...</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="info-column">
-                  <h4 className="info-column__title">💡 Insights rápidos</h4>
-                  <div className="info-column__content info-column__content--stacked">
-                    {item.insights && item.insights.length > 0 ? (
-                      item.insights.map((insight, i) => (
-                        <div key={i} className="insight-pill">
-                          <span className="insight-pill__beam" />
-                          <p>{insight}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="chip chip--ghost">Extraindo insights...</span>
+                      <p className="list-item list-item--muted">Buscando fontes confiáveis...</p>
                     )}
                   </div>
                 </div>
               </div>
-
-              {item.questions && item.questions.length > 0 && (
-                <div className="question-grid">
-                  {item.questions.map((q, i) => (
-                    <div key={i} className="question-chip">
-                      <span className="question-chip__icon">❓</span>
-                      <p>{typeof q === 'string' ? q : 'Gerando...'}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </article>
           )
         })}

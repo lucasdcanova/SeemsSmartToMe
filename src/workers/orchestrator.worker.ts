@@ -1,4 +1,4 @@
-import { summarizeLocal } from '../utils/summarize'
+import { extractKeywordsLocal } from '../utils/summarize'
 
 interface InitMessage {
   type: 'init'
@@ -46,22 +46,16 @@ async function processBuffer() {
   }
 
   buffer = ''
-  let result = {
-    summary: '',
-    topics: [] as string[],
-    intents: [] as string[],
-    questions: [] as string[],
+  const result: { topics: string[] } = {
+    topics: [],
   }
 
   if (offline || !openaiKey) {
     console.log('[Orchestrator] Processing offline or without API key')
-    result.summary = summarizeLocal(text)
-    result.topics = Array.from(new Set(text.split(/\W+/).filter(word => word.length > 3).slice(0, 5)))
-    result.intents = ['Conversação geral', 'Compartilhamento de informações']
-    result.questions = ['Qual o contexto?', 'Como isso se relaciona?']
+    result.topics = extractKeywordsLocal(text)
   } else {
     console.log('[Orchestrator] Processing with OpenAI API')
-    const prompt = `Resuma o texto a seguir e extraia topicos, intencoes e perguntas implicitas. Responda em JSON com as chaves summary, topics, intents e questions. Texto: """${text}"""`
+    const prompt = `Identifique os principais temas presentes no texto a seguir para apoiar uma busca de notícias e informações relacionadas. Responda apenas em JSON válido com a chave "topics" (lista de strings curtas). Texto: """${text}"""`
 
     try {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -73,19 +67,18 @@ async function processBuffer() {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: `You are a helpful assistant summarizing in ${language}.` },
+            { role: 'system', content: `Você extrai temas curtos e objetivos em ${language}.` },
             { role: 'user', content: prompt },
           ],
-          temperature: 0.7,
+          temperature: 0.4,
+          max_tokens: 400,
         }),
       })
 
       if (!res.ok) {
         console.error('[Orchestrator] API Error:', res.status, res.statusText)
-        const errorText = await res.text()
-        console.error('[Orchestrator] API Error details:', errorText)
-        result.summary = `Erro na API: ${res.status} - ${errorText.substring(0, 100)}`
-        ;(self as unknown as Worker).postMessage(result)
+        const fallback = extractKeywordsLocal(text)
+        ;(self as unknown as Worker).postMessage({ topics: fallback })
         return
       }
 
@@ -103,25 +96,30 @@ async function processBuffer() {
         const parsed = JSON.parse(content)
 
         // Ensure all fields are properly set
-        result.summary = parsed.summary || text.substring(0, 100)
         result.topics = Array.isArray(parsed.topics) ? parsed.topics : []
-        result.intents = Array.isArray(parsed.intents) ? parsed.intents : []
-        result.questions = Array.isArray(parsed.questions) ? parsed.questions : []
 
         console.log('[Orchestrator] Parsed result:', result)
       } catch (parseError) {
         console.error('[Orchestrator] JSON Parse Error:', parseError)
         // Fallback: extract what we can from the response
         const content = data.choices?.[0]?.message?.content || ''
-        result.summary = content.substring(0, 200) || 'Análise do conteúdo'
-        result.topics = text.split(/\W+/).filter(word => word.length > 4).slice(0, 5)
-        result.intents = ['Discussão geral']
-        result.questions = ['O que mais você gostaria de saber?']
+        const fallback = Array.from(
+          new Set(
+            content
+              .split(/[^\p{L}\p{N}]+/u)
+              .filter((word: string) => word.length > 4)
+          )
+        )
+        result.topics = fallback.length > 0 ? fallback.slice(0, 5) : extractKeywordsLocal(text)
       }
-    } catch (fetchError: any) {
+    } catch (fetchError) {
       console.error('[Orchestrator] Fetch Error:', fetchError)
-      result.summary = `Erro de conexão: ${fetchError.message || 'Erro desconhecido'}`
+      result.topics = extractKeywordsLocal(text)
     }
+  }
+
+  if (result.topics.length === 0) {
+    result.topics = extractKeywordsLocal(text)
   }
 
   console.log('[Orchestrator] Final result:', result)

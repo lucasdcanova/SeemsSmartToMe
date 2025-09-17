@@ -124,13 +124,17 @@ IMPORTANTE: Responda APENAS em JSON válido, sem markdown:
 
       // Add insights
       if (parsed.insights && Array.isArray(parsed.insights)) {
-        insights.push(...parsed.insights.filter((i: any) => i && i.length > 0))
+        parsed.insights.forEach((entry: unknown) => {
+          if (typeof entry === 'string' && entry.length > 0) {
+            insights.push(entry)
+          }
+        })
       }
 
       // Add news with proper URLs
       if (parsed.news && Array.isArray(parsed.news)) {
-        parsed.news.forEach((item: any) => {
-          if (item.title) {
+        parsed.news.forEach((item: { title?: string; url?: string } | string) => {
+          if (typeof item === 'object' && item && 'title' in item && item.title) {
             // Ensure URL is valid
             let url = item.url || '#'
             if (!url.startsWith('http')) {

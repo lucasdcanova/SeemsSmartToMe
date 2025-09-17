@@ -4,10 +4,7 @@ import { saveHistory, loadHistory } from './utils/db'
 
 export interface FeedItem {
   id: number
-  summary: string
   topics: string[]
-  intents: string[]
-  questions: string[]
   news: { title: string; url: string }[]
   insights: string[]
   timestamp: number

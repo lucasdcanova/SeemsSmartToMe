@@ -11,9 +11,12 @@ function App() {
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const [listening, setListening] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [currentTranscript, setCurrentTranscript] = useState('')
   const [processingStatus, setProcessingStatus] = useState('')
   const hasContent = useMemo(() => feed.length > 0, [feed])
+  const audioWaveActive = listening || Boolean(currentTranscript)
+  const audioWaveSpeaking = Boolean(currentTranscript)
 
   useEffect(() => {
     loadCachedFeed()
@@ -124,45 +127,54 @@ function App() {
             <span className="app-eyebrow">Captura. Resume. Conecta.</span>
             <h1 className="app-title">Agente Insider</h1>
             <p className="app-lead">Escuta suas conversas, gera resumos rápidos e traz links confiáveis. Sem ruído.</p>
+
+            <div className="hero-copy__cta">
+              <button
+                type="button"
+                onClick={listening ? stop : start}
+                className={`hero-cta ${listening ? 'hero-cta--listening' : ''}`}
+                aria-pressed={listening}
+              >
+                <span className="hero-cta__icon" aria-hidden="true">
+                  {listening ? (
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                  ) : (
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                  )}
+                </span>
+                <span className="hero-cta__label">{listening ? 'Parar captura' : 'Iniciar gravação'}</span>
+              </button>
+
+              <span className="hero-copy__cta-hint">Inicie quando quiser. O agente captura e resume em segundos.</span>
+            </div>
           </div>
 
           <div className="hero-console">
-            <button
-              onClick={listening ? stop : start}
-              className={`hero-cta ${listening ? 'hero-cta--listening' : ''}`}
-              aria-pressed={listening}
-            >
-              <span className="hero-cta__icon" aria-hidden="true">
-                {listening ? (
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                  </svg>
-                ) : (
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                )}
+            <div className="hero-status-board" role="status" aria-live="polite">
+              <span className={`status-chip ${offline ? 'status-chip--offline' : 'status-chip--online'}`}>
+                <span className="status-chip__dot" aria-hidden="true" />
+                <span className="status-chip__label">{offline ? 'Offline' : 'Conectado'}</span>
               </span>
-              <span className="hero-cta__label">{listening ? 'Parar' : 'Ouvir'}</span>
-            </button>
-
-            <div className="hero-status-strip">
-              <span className={`hero-status ${offline ? 'hero-status--offline' : 'hero-status--online'}`}>
-                <span className="hero-status__dot" aria-hidden="true" />
-                <span className="hero-status__label">{offline ? 'Offline' : 'Online'}</span>
+              <span className={`status-chip ${listening ? 'status-chip--recording' : ''}`}>
+                <span className={`status-chip__dot ${listening ? 'status-chip__dot--amber' : ''}`} aria-hidden="true" />
+                <span className="status-chip__label">{listening ? 'Gravando' : 'Em espera'}</span>
               </span>
-              <span className={`hero-status hero-status--pill ${listening ? 'hero-status--recording' : ''}`}>
-                <span className="hero-status__dot" aria-hidden="true" />
-                <span className="hero-status__label">{listening ? 'Gravando' : 'Pronto'}</span>
-              </span>
-              <span className={`hero-status hero-status--signal ${currentTranscript ? 'hero-status--signal-active' : ''}`}>
-                <span className="hero-waves" aria-hidden="true">
+              <span
+                className={`status-chip status-chip--wave${audioWaveActive ? ' status-chip--wave-active' : ''}${
+                  audioWaveSpeaking ? ' status-chip--wave-speaking' : ''
+                }`}
+              >
+                <span className="mini-wave" aria-hidden="true">
                   <span />
                   <span />
                   <span />
                 </span>
-                <span className="hero-status__label">Áudio</span>
+                <span className="status-chip__label">Áudio</span>
               </span>
             </div>
           </div>
@@ -183,11 +195,26 @@ function App() {
             <button onClick={() => setShowSettings(!showSettings)} className="link-button">
               {showSettings ? 'Ocultar ajustes' : 'Ajustes'}
             </button>
-            {hasContent && (
-              <button onClick={exportJson} className="link-button link-button--primary">
-                Exportar histórico
+            <div className="control-actions__group">
+              {hasContent && (
+                <button onClick={exportJson} className="link-button link-button--primary">
+                  Exportar histórico
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowHistory((prev) => !prev)}
+                className={`history-toggle ${showHistory ? 'history-toggle--active' : ''}`}
+                aria-pressed={showHistory}
+                aria-label={`${showHistory ? 'Ocultar' : 'Mostrar'} histórico`}
+                title={showHistory ? 'Ocultar histórico' : 'Mostrar histórico'}
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6l3 3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 21a9 9 0 110-18 9 9 0 010 18z" />
+                </svg>
               </button>
-            )}
+            </div>
           </div>
         </section>
 
@@ -196,16 +223,18 @@ function App() {
             <Settings settings={settings} setSettings={setSettings} />
           </div>
         )}
-        <section className="feed-panel surface">
-          <div className="panel-header">
-            <div>
-              <h2 className="panel-title">Sessões recentes</h2>
-              <p className="panel-subtitle">Resumos automáticos com tópicos, fontes e perguntas.</p>
+        {showHistory && (
+          <section className="feed-panel surface">
+            <div className="panel-header">
+              <div>
+                <h2 className="panel-title">Histórico de resumos</h2>
+                <p className="panel-subtitle">Revise blocos anteriores com tópicos, fontes e perguntas.</p>
+              </div>
+              {hasContent && <span className="panel-note">{feed.length} blocos</span>}
             </div>
-            {hasContent && <span className="panel-note">{feed.length} blocos</span>}
-          </div>
-          <Feed feed={feed} />
-        </section>
+            <Feed feed={feed} />
+          </section>
+        )}
       </div>
     </div>
   )
